@@ -8,7 +8,8 @@ struct Agent {
   int start_x, start_y, end_x, end_y, curr_x, curr_y, occu_val;
 };
 
-#define GRID_VALUE_LIMIT 4
+#define GRID_VALUE_LIMIT 6
+#define PROBABILITY 0.1
 
 #include <algorithm>
 #include <iostream>
@@ -28,11 +29,8 @@ struct Agent {
  
 
 bool is_finished(const std::vector<Agent>& agents, int num_agents) {
-    for(int i = 0; i < num_agents;i++){
-        if(agents[i].curr_x != agents[i].end_x) {
-            return false;
-        }
-        if(agents[i].curr_y != agents[i].end_y) {
+    for(int i = 0; i < num_agents; i++){
+        if(agents[i].curr_x != agents[i].end_x || agents[i].curr_y != agents[i].end_y) {
             return false;
         }
     }
@@ -87,58 +85,78 @@ bool brings_closer(Agent &agent, int direction){
     else if (direction == 3 && (currX - endX) > 0){ // WEST
         return true;
     }
-    else{
+    else {
         return false;
     }
  }
  
  
-void move_agent(Agent &agent, const std::vector<std::vector<int>>& occupancy, int dimX, int dimY) { 
+void move_agent(int agent_id, Agent &agent, const std::vector<std::vector<int>>& occupancy, int dimX, int dimY, std::mt19937 generator) { 
     int currX = agent.curr_x;
     int currY = agent.curr_y;
-    
+
     // check which ones are feasible
-    int feasible[4] = {0};
+    std::vector<int> feasible;
 
     // N E S W
     if(currY-1 >= 0 && (occupancy[currY-1][currX] + agent.occu_val) <= GRID_VALUE_LIMIT) { // check N
-        feasible[0] = 1;
+        feasible.push_back(0);
     }
     if (currX+1 < dimX && (occupancy[currY][currX+1] + agent.occu_val) <= GRID_VALUE_LIMIT) { // check E
-        feasible[1] = 1;
+        feasible.push_back(1);
     }
     if (currY+1 < dimY && (occupancy[currY+1][currX] + agent.occu_val) <= GRID_VALUE_LIMIT) { // check S
-        feasible[2] = 1;
+        feasible.push_back(2);
     }
     if (currX-1 >= 0 && (occupancy[currY][currX-1] + agent.occu_val) <= GRID_VALUE_LIMIT) { // check W
-        feasible[3] = 1;
+        feasible.push_back(3);
     }
+
+    std::uniform_real_distribution<double> distribution(0.0, 1.0);
+
+    double P = distribution(generator); // percentage
+    int result = (P < 1 - PROBABILITY) ? 1 : 0;
 
     int direction = -1;
 
-    for (int i = 0; i < 4; i++){
-        if(feasible[i] == 1 && brings_closer(agent, i)){
-            direction = i;
+    std::shuffle(feasible.begin(), feasible.end(), generator);
+
+    if (result == 1) { // less than 0.9, choose best move
+        for (int index : feasible) {
+            if (brings_closer(agent, index)) {
+                direction = index;
+                break;
+            }
         }
-    } // only create positive results for the agent
+    }
+    else { // choose random move
+        if (feasible.size() != 0) {
+            direction = feasible.at(0);
+        }
+    }
+
+    bool is_trapped = feasible.size() == 0 ? true : false;
+
+    if (is_trapped){
+        printf("Agent is trapped at %d %d\n", currX, currY);
+        if(currX == dimX-1 || currX == 0 || currY == dimY-1 || currY == 0){
+            printf("Agent is on edge");
+        }
+    }
 
     if (direction == 0) {
-        // printf("Agent moves NORTH\n");
         agent.curr_y -= 1;
     }
     else if (direction == 1) {
-        // printf("Agent moves EAST\n");
-        agent.curr_x +=1;
+        agent.curr_x += 1;
     }
     else if (direction == 2) {
-        // printf("Agent moves SOUTH\n");
-        agent.curr_y +=1;
+        agent.curr_y += 1;
     }
     else if (direction == 3) {
-        // printf("Agent moves WEST\n");
         agent.curr_x -= 1;
     }
-    //printf("Agent does not move\n");
+
     return;
  }
   
@@ -190,12 +208,6 @@ int main(int argc, char *argv[]) {
         agent.curr_x = agent.start_x;
         agent.curr_y = agent.start_y;
     }
-
-    printf("NUMBER OF AGENTS %d, GRID DIM %d x %d\n", num_agents, dim_x, dim_y);
-    
-    for(int i = 0; i< num_agents;i++){
-        printf("Agent %d, start_x %d, start_y %d, end_x %d, end_y %d, curr_x %d, curr_y %d", i, agents[i].start_x, agents[i].start_y, agents[i].end_x, agents[i].end_y, agents[i].curr_x, agents[i].curr_y);
-    }
  
     /* Initialize any additional data structures needed in the algorithm */
  
@@ -205,27 +217,42 @@ int main(int argc, char *argv[]) {
     const auto compute_start = std::chrono::steady_clock::now();
 
     int iteration_count = 0;
-
+    
     while (!is_finished(agents, num_agents)) {
-      for(int i = 0; i < num_agents;i++){
-      
-            write_to_occupancy(agents[i], occupancy, false);
-            //printf("BEFORE: Agent %d, currX %d currY %d, occuVal %d\n", i, agents[i].curr_x, agents[i].curr_y, agents[i].occu_val);
 
-            move_agent(agents[i], occupancy, dim_x, dim_y);
+      for (int i = 0; i < num_agents; i++){
+            if (agents[i].curr_x == agents[i].end_x && agents[i].curr_y == agents[i].end_y){
+                printf("Agent %d has already completed it's mission\n", i);
+                continue;
+            }
+            else {
+                printf("Agent %d has not completed it's mission, %d %d\n", i, agents[i].curr_x, agents[i].curr_y);    
 
-            write_to_occupancy(agents[i], occupancy, true);
-            //printf("AFTER: Agent %d, currX %d currY %d, occuVal %d\n", i, agents[i].curr_x, agents[i].curr_y, agents[i].occu_val);
+                if(iteration_count != 0) {
+                    write_to_occupancy(agents[i], occupancy, false);
+                }
+                //printf("BEFORE: Agent %d, currX %d currY %d, occuVal %d\n", i, agents[i].curr_x, agents[i].curr_y, agents[i].occu_val);
+                std::random_device rd;  
+                std::mt19937 generator(rd()); 
+                
+                move_agent(i, agents[i], occupancy, dim_x, dim_y, generator);
 
+                if(agents[i].curr_x == agents[i].end_x && agents[i].curr_y == agents[i].end_y){
+                    printf("Agent %d has completed it's mission\n", i);
+                }
+                write_to_occupancy(agents[i], occupancy, true);
+                //printf("AFTER: Agent %d, currX %d currY %d, occuVal %d\n", i, agents[i].curr_x, agents[i].curr_y, agents[i].occu_val);
+            }
       }
+
       iteration_count += 1;
-      printf("Iteration: %d\n", iteration_count);
 
       if(!verify_occupancy(occupancy, dim_x, dim_y)){
         printf("Occupancy did not verify");
         break;
       }
     }
+    printf("Iteration Count: %d\n",iteration_count);
   
     const double compute_time = std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::steady_clock::now() - compute_start).count();
     std::cout << "Computation time (sec): " << compute_time << '\n';
