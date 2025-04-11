@@ -1,16 +1,16 @@
 /**
- * Large-scale Crowd Simulations (Sequential)
+ * Large-scale Crowd Simulations (Parallel with Open MP)
  * Elly Zheng (ellyz), Rose Liu (roseliu)
  */
 
 struct Agent {
-  /* Define the data structure for agent here. */ 
-  int start_x, start_y, end_x, end_y, curr_x, curr_y, occu_val;
+    /* Define the data structure for agent here. */ 
+    int start_x, start_y, end_x, end_y, curr_x, curr_y, occu_val;
 };
-
+  
 #define GRID_VALUE_LIMIT 6
 #define PROBABILITY 0.1
-
+  
 #include <algorithm>
 #include <iostream>
 #include <fstream>
@@ -18,15 +18,15 @@ struct Agent {
 #include <chrono>
 #include <string>
 #include <vector>
- 
+   
 #include <random>
 #include <cmath>
 #include <cstdlib>
 #include <ctime>
 #include <climits>
- 
+   
 #include <unistd.h>
- 
+#include <omp.h>
 
 bool is_finished(const std::vector<Agent>& agents, int num_agents) {
     for(int i = 0; i < num_agents; i++){
@@ -57,9 +57,11 @@ void write_to_occupancy(Agent &agent, std::vector<std::vector<int>>& occupancy, 
     int agent_val = agent.occu_val;
  
     if(add){ 
+        #pragma omp atomic
         occupancy[currY][currX] += agent_val;
     }
     else {
+        #pragma omp atomic
         occupancy[currY][currX] -= agent_val;
     }
 }
@@ -165,12 +167,16 @@ int main(int argc, char *argv[]) {
     const auto init_start = std::chrono::steady_clock::now();
  
     std::string input_filename;
+    int num_threads = 0;
  
     int opt;
-    while ((opt = getopt(argc, argv, "f:")) != -1) {
+    while ((opt = getopt(argc, argv, "f:n:")) != -1) {
         switch (opt) {
         case 'f':
             input_filename = optarg;
+            break;
+        case 'n':
+            num_threads = atoi(optarg);
             break;
 
         default:
@@ -180,11 +186,12 @@ int main(int argc, char *argv[]) {
     }
  
     // Check if required options are provided
-    if (empty(input_filename)) {
+    if (empty(input_filename) ||  num_threads <= 0) {
         std::cerr << "Usage: " << argv[0] << " -f input_filename\n";
         exit(EXIT_FAILURE);
     }
- 
+    std::cout << "Number of threads: " << num_threads << '\n';
+
     std::ifstream fin(input_filename);
  
     if (!fin) {
@@ -217,11 +224,14 @@ int main(int argc, char *argv[]) {
     const auto compute_start = std::chrono::steady_clock::now();
 
     int iteration_count = 0;
-
+    std::random_device rd; 
     
-    while (!is_finished(agents, num_agents)) {
+    omp_set_num_threads(num_threads);
 
-      for (int i = 0; i < num_agents; i++){
+    while (!is_finished(agents, num_agents)) {
+        
+       //  #pragma omp parallel 
+        for (int i = 0; i < num_agents; i++){
             if (agents[i].curr_x == agents[i].end_x && agents[i].curr_y == agents[i].end_y){
                 // printf("Agent %d has already completed it's mission\n", i);
                 continue;
@@ -232,8 +242,7 @@ int main(int argc, char *argv[]) {
                 if(iteration_count != 0){
                     write_to_occupancy(agents[i], occupancy, false);
                 }
-                //printf("BEFORE: Agent %d, currX %d currY %d, occuVal %d\n", i, agents[i].curr_x, agents[i].curr_y, agents[i].occu_val);
-                std::random_device rd;  
+        
                 std::mt19937 generator(rd()); 
                 
                 move_agent(i, agents[i], occupancy, dim_x, dim_y, generator);
@@ -242,7 +251,6 @@ int main(int argc, char *argv[]) {
                 //     printf("Agent %d has completed it's mission\n", i);
                 // }
                 write_to_occupancy(agents[i], occupancy, true);
-                //printf("AFTER: Agent %d, currX %d currY %d, occuVal %d\n", i, agents[i].curr_x, agents[i].curr_y, agents[i].occu_val);
             }
       }
 

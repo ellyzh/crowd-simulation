@@ -1,20 +1,32 @@
 CXX = g++
 
-CXXFLAGS = -Wall -std=c++17
+CXXFLAGS_SERIAL = -Wall -std=c++17
+CXXFLAGS_PARALLEL = -Wall -std=c++17 -fopenmp
 
-TARGET = serial
+TARGETS = serial parallel
 
-SRCS = serial.cpp
+SERIAL_SRC = serial.cpp
+PARALLEL_SRC = parallel.cpp
 
-OBJS = $(SRCS:.cpp=.o)
+SERIAL_OBJ = $(SERIAL_SRC:.cpp=.o)
+PARALLEL_OBJ = $(PARALLEL_SRC:.cpp=.o)
 
-all: $(TARGET)
+all: $(TARGETS)
 
-$(TARGET): $(OBJS)
-	$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJS)
+s: serial
+p: parallel
 
-%.o: %.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+serial: $(SERIAL_OBJ)
+	$(CXX) $(CXXFLAGS_SERIAL) -o $@ $^
+
+parallel: $(PARALLEL_OBJ)
+	$(CXX) $(CXXFLAGS_PARALLEL) -o $@ $^
+
+serial.o: serial.cpp
+	$(CXX) $(CXXFLAGS_SERIAL) -c $< -o $@
+
+parallel.o: parallel.cpp
+	$(CXX) $(CXXFLAGS_PARALLEL) -c $< -o $@
 
 clean:
-	rm -f $(TARGET) $(OBJS)
+	rm -f $(TARGETS) *.o
