@@ -19,6 +19,7 @@
    
 #include <unistd.h>
 #include "quadtree.h"
+
 // #include <omp.h>
   
 bool is_in_range(std::vector<Agent> agents, int num_agents, int dim_x, int dim_y){
@@ -43,7 +44,7 @@ void update_positions(std::vector<Agent>& agents, int num_agents) {
 void check_collisions(Agent &agent, std::vector<Agent>& agents) {
     for(int i = 0; i < agents.size(); i++) {
         if (agent.next_x == agents[i].next_x && agent.next_y == agents[i].next_y) {
-            printf("Collision at %d %d\n", agent.next_x, agent.next_y);
+            // printf("Collision at %d %d\n", agent.next_x, agent.next_y);
 
             if(agent.dir == 0){
                 agent.dir = 2;
@@ -194,7 +195,22 @@ void check_collisions(Agent &agent, std::vector<Agent>& agents) {
       }
       return;
    }
-  
+
+
+void printQuadtree(const Quadtree &node, int level = 0) {
+    std::string indent(level * 2, ' ');
+
+    std::cout << indent << "Node: [" << node.min_x << ", " << node.min_y << "] to ["
+              << node.max_x << ", " << node.max_y << "], Agents: " << node.agents.size() << "\n";
+    
+    for (int i = 0; i < 4; i++) {
+        if (node.children[i] != nullptr) {
+            std::cout << indent << "Child " << i << ":\n";
+            printQuadtree(*(node.children[i]), level + 1);
+        }
+    }
+}
+
   
   int main(int argc, char *argv[]) {
         const auto init_start = std::chrono::steady_clock::now();
@@ -253,35 +269,46 @@ void check_collisions(Agent &agent, std::vector<Agent>& agents) {
         int iteration_count = 0;
 
         Quadtree qt(0, 0, dim_x-1, dim_y-1, 0);
-  
-        while (iteration_count < num_iterations) {
-            // clear quadtree
-            qt.reset();
-  
-            for (int i = 0; i < num_agents; i++) {
-                std::random_device rd;  
-                std::mt19937 generator(rd()); 
-                move_agent(i, agents[i], dim_x, dim_y, generator);
-                // build quadtree by inserting elements
-                qt.insert(agents[i]);
-            } 
-            for (int i = 0; i < num_agents; i++){
-                Quadtree *leaf = qt.get_leaf(agents[i]);
-                // query quadtree to find which nodes could possibly collide
-                std::vector<Agent> to_compare = leaf->collidable_agents();
-                check_collisions(agents[i], to_compare);
-            }
 
-            for (int i = 0; i < num_agents; i++){
-                update_positions(agents, num_agents);
-            }
+        for (int i = 0; i < num_agents; i++) {
+            std::random_device rd;  
+            std::mt19937 generator(rd()); 
+            move_agent(i, agents[i], dim_x, dim_y, generator);
+            // build quadtree by inserting elements
+            qt.insert(agents[i]);
+        } 
 
-            iteration_count += 1;
+        printQuadtree(qt);
+
+        // while (iteration_count < num_iterations) {
+        //     // clear quadtree
+        //     qt.reset();
   
-            if(!is_in_range(agents, num_agents, dim_x, dim_y)){
-                printf("AGENT NOT IN RANGE\n");
-            }
-        }
+        //     for (int i = 0; i < num_agents; i++) {
+        //         std::random_device rd;  
+        //         std::mt19937 generator(rd()); 
+        //         move_agent(i, agents[i], dim_x, dim_y, generator);
+        //         // build quadtree by inserting elements
+        //         qt.insert(agents[i]);
+        //     } 
+        
+        //     for (int i = 0; i < num_agents; i++){
+        //         Quadtree *leaf = qt.get_leaf(agents[i]);
+        //         // query quadtree to find which nodes could possibly collide
+        //         std::vector<Agent> to_compare = leaf->collidable_agents();
+        //         check_collisions(agents[i], to_compare);
+        //     }
+
+        //     for (int i = 0; i < num_agents; i++){
+        //         update_positions(agents, num_agents);
+        //     }
+
+        //     iteration_count += 1;
+  
+        //     if(!is_in_range(agents, num_agents, dim_x, dim_y)){
+        //         printf("AGENT NOT IN RANGE\n");
+        //     }
+        // }
     
         const double compute_time = std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::steady_clock::now() - compute_start).count();
   

@@ -19,7 +19,7 @@
  };
   
  class Quadtree {
-     private:
+     public:
          // bounds
          int min_x, min_y, max_x, max_y;
          int depth;
@@ -29,7 +29,7 @@
 
          //std::array<Quadtree, 4> children;
  
-     public:
+    //  public:
         Quadtree(int min_x, int min_y, int max_x, int max_y, int depth):
         min_x(min_x), min_y(min_y), max_x(max_x), max_y(max_y), depth(depth){
             for (int i = 0; i < 4; i++) {
