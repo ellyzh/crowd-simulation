@@ -8,9 +8,6 @@ struct Agent {
   int x_pos, y_pos, dir, next_x, next_y;
 };
 
-#define GRID_VALUE_LIMIT 6
-#define PROBABILITY 0.1
-
 #include <algorithm>
 #include <iostream>
 #include <fstream>
@@ -27,12 +24,86 @@ struct Agent {
  
 #include <unistd.h>
 
+bool is_in_range(std::vector<Agent> agents, int num_agents, int dim_x, int dim_y){
+
+    for(int i = 0; i < num_agents; i++) {
+        int x = agents[i].x_pos; 
+        int y = agents[i].y_pos; 
+
+        if(x > dim_x-1 || x < 0 || y > dim_y-1|| y < 0){
+            return false;
+        } 
+    }
+    return true;
+}
+
+void update_positions(std::vector<Agent>& agents, int num_agents) {
+    for(int i = 0; i < num_agents; i++) {
+        agents[i].x_pos = agents[i].next_x;
+        agents[i].y_pos = agents[i].next_y;
+    }
+}
+
+void check_collisions(std::vector<Agent>& agents, int num_agents) {
+
+    for(int i = 0; i < num_agents; i++) {
+        for(int j = i; j < num_agents; j++) {
+
+            // collision detected
+
+            if (i != j && agents[i].next_x == agents[j].next_x && agents[i].next_y == agents[j].next_y) {
+
+                printf("Collision at %d %d\n", agents[i].next_x, agents[i].next_y);
+
+                // agents[i]
+                if(agents[i].dir == 0){
+                    agents[i].dir = 2;
+                }
+                else if(agents[i].dir == 1){
+                    agents[i].dir = 3;
+                }
+                else if(agents[i].dir == 2){
+                    agents[i].dir = 0;
+                }
+                else{
+                    agents[i].dir = 1;
+                }
+                
+                //  agents[j]
+                if(agents[j].dir == 0){
+                    agents[j].dir = 2;
+                }
+                else if(agents[j].dir == 1){
+                    agents[j].dir = 3;
+                    
+                }
+                else if(agents[j].dir == 2){
+                    agents[j].dir = 0;
+
+                }
+                else{
+                    agents[j].dir = 1;
+
+                }
+                // directions have been reset
+                agents[i].next_x = agents[i].x_pos;
+                agents[i].next_y = agents[i].y_pos;
+                agents[j].next_x = agents[j].x_pos;
+                agents[j].next_y = agents[j].y_pos;
+            }
+        }
+    }
+}
+
+
 // assuming no collisions
 void move_agent(int agent_id, Agent &agent, int dimX, int dimY, std::mt19937 generator) { 
     int currX = agent.x_pos;
     int currY = agent.y_pos;
 
-    int currDirection = agent.dir;
+    agent.next_x = agent.x_pos;
+    agent.next_y = agent.y_pos;
+    
     int direction = -1;
 
     // N E S W
@@ -40,50 +111,48 @@ void move_agent(int agent_id, Agent &agent, int dimX, int dimY, std::mt19937 gen
     std::uniform_int_distribution<int> dist_2(0, 1);
     std::uniform_int_distribution<int> dist_3(0, 2);
 
-
     if(currX == 0 && currY == 0){ // top left
         // only options are E and S
         int next_dir = dist_2(generator); 
         if (next_dir == 0){
-            direction = 0;
+            direction = 1; // E
         }
         else{
-            direction = 2;
+            direction = 2; // S
         }
     } 
     else if (currX == dimX-1 && currY == 0){ // top right
         // only options are S and W
         int next_dir = dist_2(generator); 
         if (next_dir == 0) {
-            direction = 2;
+            direction = 2; // S
         }
         else {
-            direction = 3;
+            direction = 3; // W
         }
     }
     else if (currX == 0 && currY == dimY-1){ // bottom left
          // only options are N and E
         int next_dir = dist_2(generator); 
         if (next_dir == 0) {
-            direction = 0;
+            direction = 0; // N
         }
         else {
-            direction = 1;
+            direction = 1; // E
         }
     }
     else if (currX == dimX-1 && currY == dimY-1 ){ // bottom right
         // only options are N and W
         int next_dir = dist_2(generator);
         if (next_dir == 0) {
-            direction = 0;
+            direction = 0; // N
         }
         else {
-            direction = 3;
+            direction = 3; // W
         }
     }
-    else if (currX == dimX-1 || currX == 0 || currY == dimY-1 || currY == 0){
+    else if ((currX == dimX-1 && agent.dir == 1) || (currX == 0 && agent.dir == 3) || (currY == dimY-1 && agent.dir == 2) || (currY == 0 && agent.dir == 0)){
         // agent is on edge
-        printf("Agent is on edge");
         if (currX == dimX-1) { // right
             int next_dir = dist_3(generator); 
             if (next_dir == 0){
@@ -138,22 +207,27 @@ void move_agent(int agent_id, Agent &agent, int dimX, int dimY, std::mt19937 gen
         direction = agent.dir;
     }
 
-    if (direction == 0) {
-        agent.next_y -= 1;
+    if (direction == 0) {      
+        agent.next_y = currY - 1;
     }
     else if (direction == 1) {
-        agent.next_x += 1;
+        agent.next_x = currX + 1;
     }
     else if (direction == 2) {
-        agent.next_y += 1;
+        agent.next_y = currY + 1;
     }
     else if (direction == 3) {
-        agent.next_x -= 1;
+        agent.next_x = currX - 1;
+    }
+
+    if(agent.next_x > dimX -1 || agent.next_x < 0 || agent.next_y > dimY -1|| agent.next_y < 0){
+        printf("OUT OF RANGE NEXT X Y, %d %d", agent.next_x, agent.next_y);
     }
 
     return;
  }
- 
+
+
 int main(int argc, char *argv[]) {
     const auto init_start = std::chrono::steady_clock::now();
  
@@ -196,10 +270,7 @@ int main(int argc, char *argv[]) {
     fin >> dim_x >> dim_y >> num_agents;
  
     std::vector<Agent> agents(num_agents);
-   
-    // Occupancy grid is created
-    // std::vector occupancy(dim_y, std::vector<int>(dim_x));
- 
+
     for (auto& agent : agents) {
         fin >> agent.x_pos >> agent.y_pos >> agent.dir;
         agent.next_x = agent.x_pos;
@@ -215,21 +286,23 @@ int main(int argc, char *argv[]) {
 
     while (iteration_count < num_iterations) {
 
-      for (int i = 0; i < num_agents; i++){
+        for (int i = 0; i < num_agents; i++) {
             std::random_device rd;  
             std::mt19937 generator(rd()); 
             move_agent(i, agents[i], dim_x, dim_y, generator);
         }
 
-        // collision checking (changing next_x and next_y if necessary)
-        // updating x_pos and y_pos with next_x and next_y
-      
-      iteration_count += 1;
+        check_collisions(agents, num_agents);
+        update_positions(agents, num_agents);
+        iteration_count += 1;
 
+        if(!is_in_range(agents, num_agents, dim_x, dim_y)){
+            printf("AGENT NOT IN RANGE\n");
+        }
     }
-    printf("Iteration Count: %d\n", iteration_count);
   
     const double compute_time = std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::steady_clock::now() - compute_start).count();
+
     std::cout << "Computation time (sec): " << compute_time << '\n';
 }
  
