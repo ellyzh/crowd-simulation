@@ -1,7 +1,8 @@
 CXX = g++
 
 CXXFLAGS_SERIAL = -Wall -std=c++17
-CXXFLAGS_PARALLEL = -Wall -std=c++17 -fopenmp
+# CXXFLAGS_PARALLEL = -Wall -std=c++17 -fopenmp
+CXXFLAGS_PARALLEL = -Wall -std=c++17 
 
 TARGETS = serial parallel
 
@@ -9,7 +10,7 @@ SERIAL_SRC = serial.cpp
 PARALLEL_SRC = parallel.cpp
 
 SERIAL_OBJ = $(SERIAL_SRC:.cpp=.o)
-PARALLEL_OBJ = $(PARALLEL_SRC:.cpp=.o)
+PARALLEL_OBJ = $(PARALLEL_SRC:.cpp=.o) quadtree.o
 
 all: $(TARGETS)
 
@@ -25,8 +26,11 @@ parallel: $(PARALLEL_OBJ)
 serial.o: serial.cpp
 	$(CXX) $(CXXFLAGS_SERIAL) -c $< -o $@
 
-parallel.o: parallel.cpp
+parallel.o: parallel.cpp quadtree.h
 	$(CXX) $(CXXFLAGS_PARALLEL) -c $< -o $@
+
+quadtree.o: quadtree.cpp quadtree.h
+	$(CXX) $(CXXFLAGS_SERIAL) -c $< -o $@
 
 clean:
 	rm -f $(TARGETS) *.o

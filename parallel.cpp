@@ -2,14 +2,6 @@
  * Large-scale Crowd Simulations (Parallel with Open MP)
  * Elly Zheng (ellyz), Rose Liu (roseliu)
  */
-
-struct Agent {
-    /* Define the data structure for agent here. */ 
-    int start_x, start_y, end_x, end_y, curr_x, curr_y, occu_val;
-};
-  
-#define GRID_VALUE_LIMIT 6
-#define PROBABILITY 0.1
   
 #include <algorithm>
 #include <iostream>
@@ -26,244 +18,273 @@ struct Agent {
 #include <climits>
    
 #include <unistd.h>
-#include <omp.h>
-
-bool is_finished(const std::vector<Agent>& agents, int num_agents) {
-    for(int i = 0; i < num_agents; i++){
-        if(agents[i].curr_x != agents[i].end_x || agents[i].curr_y != agents[i].end_y) {
-            return false;
-        }
-    }
-    return true;
-}
-
-
-bool verify_occupancy(std::vector<std::vector<int>>& occupancy, int dim_x, int dim_y) {
-    for (int i = 0; i < dim_y; i++) {
-        for (int j = 0; j < dim_x; j++) {
-            if(occupancy[i][j] > GRID_VALUE_LIMIT) {
-                return false;
-            }
-        }
-    }
-    return true;
-}
-
-
-void write_to_occupancy(Agent &agent, std::vector<std::vector<int>>& occupancy, bool add) {
-    int currX = agent.curr_x;
-    int currY = agent.curr_y;
-   
-    int agent_val = agent.occu_val;
- 
-    if(add){ 
-        #pragma omp atomic
-        occupancy[currY][currX] += agent_val;
-    }
-    else {
-        #pragma omp atomic
-        occupancy[currY][currX] -= agent_val;
-    }
-}
-
-// assuming direction is valid
-// brings you closer to end goal
-bool brings_closer(Agent &agent, int direction){
-    int currX = agent.curr_x;
-    int currY = agent.curr_y;
-
-    int endX = agent.end_x;
-    int endY = agent.end_y;
-
-    if(direction == 0 && (currY - endY) > 0){ // NORTH 
-        return true;
-    }
-    else if (direction == 1 && (currX - endX) < 0){ // EAST
-        return true;
-    }
-    else if(direction == 2 && (currY - endY) < 0){ // SOUTH
-        return true;
-    }
-    else if (direction == 3 && (currX - endX) > 0){ // WEST
-        return true;
-    }
-    else {
-        return false;
-    }
- }
- 
- 
-void move_agent(int agent_id, Agent &agent, const std::vector<std::vector<int>>& occupancy, int dimX, int dimY, std::mt19937 generator) { 
-    int currX = agent.curr_x;
-    int currY = agent.curr_y;
-
-    // check which ones are feasible
-    std::vector<int> feasible;
-
-    // N E S W
-    if(currY-1 >= 0 && (occupancy[currY-1][currX] + agent.occu_val) <= GRID_VALUE_LIMIT) { // check N
-        feasible.push_back(0);
-    }
-    if (currX+1 < dimX && (occupancy[currY][currX+1] + agent.occu_val) <= GRID_VALUE_LIMIT) { // check E
-        feasible.push_back(1);
-    }
-    if (currY+1 < dimY && (occupancy[currY+1][currX] + agent.occu_val) <= GRID_VALUE_LIMIT) { // check S
-        feasible.push_back(2);
-    }
-    if (currX-1 >= 0 && (occupancy[currY][currX-1] + agent.occu_val) <= GRID_VALUE_LIMIT) { // check W
-        feasible.push_back(3);
-    }
-
-    std::uniform_real_distribution<double> distribution(0.0, 1.0);
-
-    double P = distribution(generator); // percentage
-    int result = (P < 1 - PROBABILITY) ? 1 : 0;
-
-    int direction = -1;
-
-    std::shuffle(feasible.begin(), feasible.end(), generator);
-
-    if (result == 1) { // less than 0.9, choose best move
-        for (int index : feasible) {
-            if (brings_closer(agent, index)) {
-                direction = index;
-                break;
-            }
-        }
-    }
-    else { // choose random move
-        if (feasible.size() != 0) {
-            direction = feasible.at(0);
-        }
-    }
-
-    bool is_trapped = feasible.size() == 0 ? true : false;
-
-    if (is_trapped){
-        printf("Agent is trapped at %d %d\n", currX, currY);
-        if(currX == dimX-1 || currX == 0 || currY == dimY-1 || currY == 0){
-            printf("Agent is on edge");
-        }
-    }
-
-    if (direction == 0) {
-        agent.curr_y -= 1;
-    }
-    else if (direction == 1) {
-        agent.curr_x += 1;
-    }
-    else if (direction == 2) {
-        agent.curr_y += 1;
-    }
-    else if (direction == 3) {
-        agent.curr_x -= 1;
-    }
-
-    return;
- }
+#include "quadtree.h"
+// #include <omp.h>
   
- 
-int main(int argc, char *argv[]) {
-    const auto init_start = std::chrono::steady_clock::now();
- 
-    std::string input_filename;
-    int num_threads = 0;
- 
-    int opt;
-    while ((opt = getopt(argc, argv, "f:n:")) != -1) {
-        switch (opt) {
-        case 'f':
-            input_filename = optarg;
-            break;
-        case 'n':
-            num_threads = atoi(optarg);
-            break;
+bool is_in_range(std::vector<Agent> agents, int num_agents, int dim_x, int dim_y){
+    for(int i = 0; i < num_agents; i++) {
+        int x = agents[i].x_pos; 
+        int y = agents[i].y_pos; 
+  
+        if(x > dim_x-1 || x < 0 || y > dim_y-1|| y < 0){
+          return false;
+        } 
+    }
+    return true;
+}
+  
+void update_positions(std::vector<Agent>& agents, int num_agents) {
+    for(int i = 0; i < num_agents; i++) {
+        agents[i].x_pos = agents[i].next_x;
+        agents[i].y_pos = agents[i].next_y;
+    }
+}
+  
+void check_collisions(Agent &agent, std::vector<Agent>& agents) {
+    for(int i = 0; i < agents.size(); i++) {
+        if (agent.next_x == agents[i].next_x && agent.next_y == agents[i].next_y) {
+            printf("Collision at %d %d\n", agent.next_x, agent.next_y);
 
-        default:
+            if(agent.dir == 0){
+                agent.dir = 2;
+            }
+            else if(agent.dir == 1){
+                agent.dir = 3;
+            }
+            else if(agent.dir == 2){
+                agent.dir = 0;
+            }
+            else{
+                agent.dir = 1;
+            }
+                  
+            agents[i].next_x = agents[i].x_pos;
+            agents[i].next_y = agents[i].y_pos;
+
+        }     
+    }
+}
+  
+    // assuming no collisions
+  void move_agent(int agent_id, Agent &agent, int dimX, int dimY, std::mt19937 generator) { 
+      int currX = agent.x_pos;
+      int currY = agent.y_pos;
+  
+      agent.next_x = agent.x_pos;
+      agent.next_y = agent.y_pos;
+      
+      int direction = -1;
+  
+      // N E S W
+      // 0 1 2 3
+      std::uniform_int_distribution<int> dist_2(0, 1);
+      std::uniform_int_distribution<int> dist_3(0, 2);
+  
+      if(currX == 0 && currY == 0){ // top left
+          // only options are E and S
+          int next_dir = dist_2(generator); 
+          if (next_dir == 0){
+              direction = 1; // E
+          }
+          else{
+              direction = 2; // S
+          }
+      } 
+      else if (currX == dimX-1 && currY == 0){ // top right
+          // only options are S and W
+          int next_dir = dist_2(generator); 
+          if (next_dir == 0) {
+              direction = 2; // S
+          }
+          else {
+              direction = 3; // W
+          }
+      }
+      else if (currX == 0 && currY == dimY-1){ // bottom left
+           // only options are N and E
+          int next_dir = dist_2(generator); 
+          if (next_dir == 0) {
+              direction = 0; // N
+          }
+          else {
+              direction = 1; // E
+          }
+      }
+      else if (currX == dimX-1 && currY == dimY-1 ){ // bottom right
+          // only options are N and W
+          int next_dir = dist_2(generator);
+          if (next_dir == 0) {
+              direction = 0; // N
+          }
+          else {
+              direction = 3; // W
+          }
+      }
+      else if ((currX == dimX-1 && agent.dir == 1) || (currX == 0 && agent.dir == 3) || (currY == dimY-1 && agent.dir == 2) || (currY == 0 && agent.dir == 0)){
+          // agent is on edge
+          if (currX == dimX-1) { // right
+              int next_dir = dist_3(generator); 
+              if (next_dir == 0){
+                  direction = 0;    
+              }
+              else if(next_dir == 1){
+                  direction = 2;
+              }
+              else{
+                  direction = 3;
+              }
+          }
+          else if (currX == 0) { // left
+              int next_dir = dist_3(generator); 
+              if (next_dir == 0) { // N
+                  direction = 0;
+              }
+              else if (next_dir == 1) { // E
+                  direction = 1;
+              }
+              else { // S
+                  direction = 2;
+              }
+          }
+          else if(currY == dimY-1){ // bottom
+              int next_dir = dist_3(generator); 
+              if (next_dir == 0){ // W
+                  direction = 3;
+              }
+              else if(next_dir == 1){ // N
+                  direction = 0;
+              }
+              else{ // E
+                  direction = 1;
+              }
+          }
+          else { // top
+              int next_dir = dist_3(generator); 
+              if (next_dir == 0){ // E
+                  direction = 1; 
+              }
+              else if(next_dir == 1){ // S
+                  direction = 2;
+   
+              }
+              else{ // W
+                  direction = 3;
+              }
+          }
+      }
+      else { // free space
+          direction = agent.dir;
+      }
+  
+      if (direction == 0) {      
+          agent.next_y = currY - 1;
+      }
+      else if (direction == 1) {
+          agent.next_x = currX + 1;
+      }
+      else if (direction == 2) {
+          agent.next_y = currY + 1;
+      }
+      else if (direction == 3) {
+          agent.next_x = currX - 1;
+      }
+  
+      if(agent.next_x > dimX -1 || agent.next_x < 0 || agent.next_y > dimY -1|| agent.next_y < 0){
+          printf("OUT OF RANGE NEXT X Y, %d %d", agent.next_x, agent.next_y);
+      }
+      return;
+   }
+  
+  
+  int main(int argc, char *argv[]) {
+        const auto init_start = std::chrono::steady_clock::now();
+   
+        std::string input_filename;
+        int num_iterations = 0;
+  
+        int opt;
+        while ((opt = getopt(argc, argv, "f:i:")) != -1) {
+            switch (opt) {
+            case 'f':
+                input_filename = optarg;
+                break;
+            case 'i':
+                num_iterations = atoi(optarg);
+                break;
+  
+            default:
+                std::cerr << "Usage: " << argv[0] << " -f input_filename\n";
+                exit(EXIT_FAILURE);
+            }
+        }
+   
+        // Check if required options are provided
+        if (empty(input_filename) ||  num_iterations <= 0) {
             std::cerr << "Usage: " << argv[0] << " -f input_filename\n";
             exit(EXIT_FAILURE);
         }
-    }
- 
-    // Check if required options are provided
-    if (empty(input_filename) ||  num_threads <= 0) {
-        std::cerr << "Usage: " << argv[0] << " -f input_filename\n";
-        exit(EXIT_FAILURE);
-    }
-    std::cout << "Number of threads: " << num_threads << '\n';
-
-    std::ifstream fin(input_filename);
- 
-    if (!fin) {
-        std::cerr << "Unable to open file: " << input_filename << ".\n";
-        exit(EXIT_FAILURE);
-    }
- 
-    int dim_x, dim_y;
-    int num_agents;
- 
-    /* Read the grid dimension and agent information from file */
-    fin >> dim_x >> dim_y >> num_agents;
- 
-    std::vector<Agent> agents(num_agents);
    
-    // Occupancy grid is created
-    std::vector occupancy(dim_y, std::vector<int>(dim_x));
- 
-    for (auto& agent : agents) {
-        fin >> agent.start_x >> agent.start_y >> agent.end_x >> agent.end_y >> agent.occu_val;
-        agent.curr_x = agent.start_x;
-        agent.curr_y = agent.start_y;
-    }
- 
-    /* Initialize any additional data structures needed in the algorithm */
- 
-    const double init_time = std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::steady_clock::now() - init_start).count();
-    std::cout << "Initialization time (sec): " << std::fixed << std::setprecision(10) << init_time << '\n';
- 
-    const auto compute_start = std::chrono::steady_clock::now();
-
-    int iteration_count = 0;
-    std::random_device rd; 
-    
-    omp_set_num_threads(num_threads);
-
-    while (!is_finished(agents, num_agents)) {
-        
-       //  #pragma omp parallel 
-        for (int i = 0; i < num_agents; i++){
-            if (agents[i].curr_x == agents[i].end_x && agents[i].curr_y == agents[i].end_y){
-                // printf("Agent %d has already completed it's mission\n", i);
-                continue;
-            }
-            else {
-                // printf("Agent %d has not completed it's mission, %d %d\n", i, agents[i].curr_x, agents[i].curr_y);    
-
-                if(iteration_count != 0){
-                    write_to_occupancy(agents[i], occupancy, false);
-                }
-        
-                std::mt19937 generator(rd()); 
-                
-                move_agent(i, agents[i], occupancy, dim_x, dim_y, generator);
-
-                // if(agents[i].curr_x == agents[i].end_x && agents[i].curr_y == agents[i].end_y){
-                //     printf("Agent %d has completed it's mission\n", i);
-                // }
-                write_to_occupancy(agents[i], occupancy, true);
-            }
-      }
-
-      iteration_count += 1;
-
-      if(!verify_occupancy(occupancy, dim_x, dim_y)){
-        printf("Occupancy did not verify");
-        break;
-      }
-    }
-    printf("Iteration Count: %d\n",iteration_count);
+        std::ifstream fin(input_filename);
+   
+        if (!fin) {
+            std::cerr << "Unable to open file: " << input_filename << ".\n";
+            exit(EXIT_FAILURE);
+        }
+   
+        int dim_x, dim_y;
+        int num_agents;
+   
+        /* Read the grid dimension and agent information from file */
+        fin >> dim_x >> dim_y >> num_agents;
+   
+        std::vector<Agent> agents(num_agents);
   
-    const double compute_time = std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::steady_clock::now() - compute_start).count();
-    std::cout << "Computation time (sec): " << compute_time << '\n';
-}
- 
+        for (auto& agent : agents) {
+            fin >> agent.x_pos >> agent.y_pos >> agent.dir;
+            agent.next_x = agent.x_pos;
+            agent.next_y = agent.y_pos;
+        }
+   
+        const double init_time = std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::steady_clock::now() - init_start).count();
+        std::cout << "Initialization time (sec): " << std::fixed << std::setprecision(10) << init_time << '\n';
+   
+        const auto compute_start = std::chrono::steady_clock::now();
+  
+        int iteration_count = 0;
+
+        Quadtree qt(0, 0, dim_x-1, dim_y-1, 0);
+  
+        while (iteration_count < num_iterations) {
+            // clear quadtree
+            qt.reset();
+  
+            for (int i = 0; i < num_agents; i++) {
+                std::random_device rd;  
+                std::mt19937 generator(rd()); 
+                move_agent(i, agents[i], dim_x, dim_y, generator);
+                // build quadtree by inserting elements
+                qt.insert(agents[i]);
+            } 
+            for (int i = 0; i < num_agents; i++){
+                Quadtree *leaf = qt.get_leaf(agents[i]);
+                // query quadtree to find which nodes could possibly collide
+                std::vector<Agent> to_compare = leaf->collidable_agents();
+                check_collisions(agents[i], to_compare);
+            }
+
+            for (int i = 0; i < num_agents; i++){
+                update_positions(agents, num_agents);
+            }
+
+            iteration_count += 1;
+  
+            if(!is_in_range(agents, num_agents, dim_x, dim_y)){
+                printf("AGENT NOT IN RANGE\n");
+            }
+        }
+    
+        const double compute_time = std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::steady_clock::now() - compute_start).count();
+  
+        std::cout << "Computation time (sec): " << compute_time << '\n';
+  }
+   
