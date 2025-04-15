@@ -1,1 +1,1 @@
-# Large-scale Crowd Simulations using Parallel Quadtree
+# Large-scale Crowd Collision Simulations using Parallel Quadtree
