@@ -20,7 +20,7 @@
 #include <unistd.h>
 #include "quadtree.h"
 
-// #include <omp.h>
+#include <omp.h>
   
 bool is_in_range(std::vector<Agent> agents, int num_agents, int dim_x, int dim_y){
     for(int i = 0; i < num_agents; i++) {
@@ -216,10 +216,11 @@ void printQuadtree(const Quadtree &node, int level = 0) {
         const auto init_start = std::chrono::steady_clock::now();
    
         std::string input_filename;
+        int num_threads = 0;
         int num_iterations = 0;
   
         int opt;
-        while ((opt = getopt(argc, argv, "f:i:")) != -1) {
+        while ((opt = getopt(argc, argv, "f:i:n:")) != -1) {
             switch (opt) {
             case 'f':
                 input_filename = optarg;
@@ -227,18 +228,23 @@ void printQuadtree(const Quadtree &node, int level = 0) {
             case 'i':
                 num_iterations = atoi(optarg);
                 break;
-  
+            case 'n':
+                num_threads = atoi(optarg);
+                break;
+
             default:
                 std::cerr << "Usage: " << argv[0] << " -f input_filename\n";
                 exit(EXIT_FAILURE);
             }
         }
-   
+
         // Check if required options are provided
-        if (empty(input_filename) ||  num_iterations <= 0) {
+        if (empty(input_filename) ||  num_iterations <= 0 || num_threads <= 0) {
             std::cerr << "Usage: " << argv[0] << " -f input_filename\n";
             exit(EXIT_FAILURE);
         }
+
+        omp_set_num_threads(num_threads);
    
         std::ifstream fin(input_filename);
    
@@ -274,17 +280,20 @@ void printQuadtree(const Quadtree &node, int level = 0) {
             // clear quadtree
             qt.reset();
             
-            
+            #pragma omp parallel for
             for (int i = 0; i < num_agents; i++) {
                 std::random_device rd;  
                 std::mt19937 generator(rd()); 
                 move_agent(i, agents[i], dim_x, dim_y, generator);
                 // build quadtree by inserting elements
-                qt.multiInsert(agents[i]);
+                // qt.multiInsert(agents[i]);
             } 
 
+            for (int i = 0; i < num_agents; i++) {
+                qt.multiInsert(agents[i]); // if needed: make this thread-safe
+            }
+
             // works up to here
-        
             for (int i = 0; i < num_agents; i++){
                 Quadtree *leaf = qt.get_leaf(agents[i]);
                 // query quadtree to find which nodes could possibly collide
@@ -292,6 +301,7 @@ void printQuadtree(const Quadtree &node, int level = 0) {
                 check_collisions(agents[i], to_compare);
             }
 
+            #pragma omp parallel for
             for (int i = 0; i < num_agents; i++){
                 update_positions(agents, num_agents);
             }

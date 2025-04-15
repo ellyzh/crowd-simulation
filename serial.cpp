@@ -51,7 +51,7 @@ void check_collisions(std::vector<Agent>& agents, int num_agents) {
             // collision detected
             if (i != j && agents[i].next_x == agents[j].next_x && agents[i].next_y == agents[j].next_y) {
 
-                printf("Collision at %d %d\n", agents[i].next_x, agents[i].next_y);
+                //printf("Collision at %d %d\n", agents[i].next_x, agents[i].next_y);
 
                 // agents[i]
                 if(agents[i].dir == 0){

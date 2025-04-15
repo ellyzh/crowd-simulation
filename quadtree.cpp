@@ -25,10 +25,28 @@ void Quadtree::split() {
     int midX = (min_x + max_x) / 2;
     int midY = (min_y + max_y) / 2;
 
-    children[0] = std::make_unique<Quadtree>(min_x, min_y, midX, midY, depth + 1);
-    children[1] = std::make_unique<Quadtree>(midX, min_y, max_x, midY, depth + 1);
-    children[2] = std::make_unique<Quadtree>(min_x, midY, midX, max_y, depth + 1);
-    children[3] = std::make_unique<Quadtree>(midX, midY, max_x, max_y, depth + 1);
+    #pragma omp parallel sections 
+    {
+        #pragma omp section 
+        {
+            children[0] = std::make_unique<Quadtree>(min_x,min_y, midX, midY, depth + 1);
+        }
+
+        #pragma omp section 
+        {
+            children[1] = std::make_unique<Quadtree>(midX, min_y, max_x, midY, depth + 1);
+        }
+
+        #pragma omp section 
+        {
+            children[2] = std::make_unique<Quadtree>(min_x, midY, midX, max_y, depth + 1);
+        }
+        
+        #pragma omp section 
+        {
+            children[3] = std::make_unique<Quadtree>(midX, midY, max_x, max_y, depth + 1);
+        }
+    }
 }
 
   
