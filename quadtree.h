@@ -11,7 +11,7 @@
  #include <memory> 
 
  const int max_agents = 4;
- const int max_depth = 10;
+ const int max_depth = 5;
 
  struct Agent {
     /* Define the data structure for agent here. */ 
@@ -40,7 +40,9 @@
           
         void split();
         int getQuadrant(Agent &agent);
+        std::vector<int> getMultiQuadrant(Agent &agent);
         void insert(Agent &agent);
+        void multiInsert(Agent &agent);
         void reset();
         Quadtree *get_leaf(Agent &agent);
         std::vector<Agent> collidable_agents();

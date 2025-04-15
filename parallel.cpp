@@ -270,45 +270,38 @@ void printQuadtree(const Quadtree &node, int level = 0) {
 
         Quadtree qt(0, 0, dim_x-1, dim_y-1, 0);
 
-        for (int i = 0; i < num_agents; i++) {
-            std::random_device rd;  
-            std::mt19937 generator(rd()); 
-            move_agent(i, agents[i], dim_x, dim_y, generator);
-            // build quadtree by inserting elements
-            qt.insert(agents[i]);
-        } 
+        while (iteration_count < num_iterations) {
+            // clear quadtree
+            qt.reset();
+            
+            
+            for (int i = 0; i < num_agents; i++) {
+                std::random_device rd;  
+                std::mt19937 generator(rd()); 
+                move_agent(i, agents[i], dim_x, dim_y, generator);
+                // build quadtree by inserting elements
+                qt.multiInsert(agents[i]);
+            } 
 
-        printQuadtree(qt);
-
-        // while (iteration_count < num_iterations) {
-        //     // clear quadtree
-        //     qt.reset();
-  
-        //     for (int i = 0; i < num_agents; i++) {
-        //         std::random_device rd;  
-        //         std::mt19937 generator(rd()); 
-        //         move_agent(i, agents[i], dim_x, dim_y, generator);
-        //         // build quadtree by inserting elements
-        //         qt.insert(agents[i]);
-        //     } 
+            // works up to here
         
-        //     for (int i = 0; i < num_agents; i++){
-        //         Quadtree *leaf = qt.get_leaf(agents[i]);
-        //         // query quadtree to find which nodes could possibly collide
-        //         std::vector<Agent> to_compare = leaf->collidable_agents();
-        //         check_collisions(agents[i], to_compare);
-        //     }
+            for (int i = 0; i < num_agents; i++){
+                Quadtree *leaf = qt.get_leaf(agents[i]);
+                // query quadtree to find which nodes could possibly collide
+                std::vector<Agent> to_compare = leaf->collidable_agents();
+                check_collisions(agents[i], to_compare);
+            }
 
-        //     for (int i = 0; i < num_agents; i++){
-        //         update_positions(agents, num_agents);
-        //     }
+            for (int i = 0; i < num_agents; i++){
+                update_positions(agents, num_agents);
+            }
 
-        //     iteration_count += 1;
+            iteration_count += 1;
   
-        //     if(!is_in_range(agents, num_agents, dim_x, dim_y)){
-        //         printf("AGENT NOT IN RANGE\n");
-        //     }
-        // }
+            if(!is_in_range(agents, num_agents, dim_x, dim_y)){
+                printf("AGENT NOT IN RANGE\n");
+            }
+        }
     
         const double compute_time = std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::steady_clock::now() - compute_start).count();
   
