@@ -1,4 +1,7 @@
 # Large-scale Crowd Collision Simulations with Parallel Quadtree
+Rose Liu (roseliu), Elly Zheng (ellyz)
+## Summary
+Simulate collisions between agents in a large crowd using a quadtree in parallel.
 
 ## Schedule
 ### April 2- April 9 [Completed]
