@@ -1,10 +1,9 @@
 /**
- * Large-scale Crowd Simulations (Sequential)
+ * Crowd Collision Simulation (Sequential)
  * Elly Zheng (ellyz), Rose Liu (roseliu)
  */
 
 struct Agent {
-  /* Define the data structure for agent here. */ 
   int x_pos, y_pos, dir, next_x, next_y;
 };
 
@@ -50,8 +49,6 @@ void check_collisions(std::vector<Agent>& agents, int num_agents) {
         for(int j = i; j < num_agents; j++) {
             // collision detected
             if (i != j && agents[i].next_x == agents[j].next_x && agents[i].next_y == agents[j].next_y) {
-
-                //printf("Collision at %d %d\n", agents[i].next_x, agents[i].next_y);
 
                 // agents[i]
                 if(agents[i].dir == 0){
@@ -113,40 +110,40 @@ void move_agent(int agent_id, Agent &agent, int dimX, int dimY, std::mt19937 gen
         // only options are E and S
         int next_dir = dist_2(generator); 
         if (next_dir == 0){
-            direction = 1; // E
+            direction = 1;
         }
         else{
-            direction = 2; // S
+            direction = 2;
         }
     } 
     else if (currX == dimX-1 && currY == 0){ // top right
         // only options are S and W
         int next_dir = dist_2(generator); 
         if (next_dir == 0) {
-            direction = 2; // S
+            direction = 2;
         }
         else {
-            direction = 3; // W
+            direction = 3;
         }
     }
     else if (currX == 0 && currY == dimY-1){ // bottom left
          // only options are N and E
         int next_dir = dist_2(generator); 
         if (next_dir == 0) {
-            direction = 0; // N
+            direction = 0;
         }
         else {
-            direction = 1; // E
+            direction = 1;
         }
     }
     else if (currX == dimX-1 && currY == dimY-1 ){ // bottom right
         // only options are N and W
         int next_dir = dist_2(generator);
         if (next_dir == 0) {
-            direction = 0; // N
+            direction = 0;
         }
         else {
-            direction = 3; // W
+            direction = 3;
         }
     }
     else if ((currX == dimX-1 && agent.dir == 1) || (currX == 0 && agent.dir == 3) || (currY == dimY-1 && agent.dir == 2) || (currY == 0 && agent.dir == 0)){
@@ -165,38 +162,37 @@ void move_agent(int agent_id, Agent &agent, int dimX, int dimY, std::mt19937 gen
         }
         else if (currX == 0) { // left
             int next_dir = dist_3(generator); 
-            if (next_dir == 0) { // N
+            if (next_dir == 0) {
                 direction = 0;
             }
-            else if (next_dir == 1) { // E
+            else if (next_dir == 1) {
                 direction = 1;
             }
-            else { // S
+            else {
                 direction = 2;
             }
         }
         else if(currY == dimY-1){ // bottom
             int next_dir = dist_3(generator); 
-            if (next_dir == 0){ // W
+            if (next_dir == 0){ 
                 direction = 3;
             }
-            else if(next_dir == 1){ // N
+            else if(next_dir == 1){
                 direction = 0;
             }
-            else{ // E
+            else{ 
                 direction = 1;
             }
         }
         else { // top
             int next_dir = dist_3(generator); 
-            if (next_dir == 0){ // E
+            if (next_dir == 0){ 
                 direction = 1; 
             }
-            else if(next_dir == 1){ // S
+            else if(next_dir == 1){ 
                 direction = 2;
- 
             }
-            else{ // W
+            else{
                 direction = 3;
             }
         }
@@ -248,7 +244,7 @@ int main(int argc, char *argv[]) {
         }
     }
  
-    // Check if required options are provided
+    // check if required options are provided
     if (empty(input_filename) ||  num_iterations <= 0) {
         std::cerr << "Usage: " << argv[0] << " -f input_filename\n";
         exit(EXIT_FAILURE);
@@ -264,7 +260,7 @@ int main(int argc, char *argv[]) {
     int dim_x, dim_y;
     int num_agents;
  
-    /* Read the grid dimension and agent information from file */
+    // read the grid dimension and agent information from file 
     fin >> dim_x >> dim_y >> num_agents;
  
     std::vector<Agent> agents(num_agents);
