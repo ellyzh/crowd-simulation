@@ -15,6 +15,7 @@
 
  struct Agent {
     int x_pos, y_pos, dir, next_x, next_y;
+    int id;
  };
   
  class Quadtree {

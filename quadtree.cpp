@@ -19,6 +19,7 @@
 #include <memory>  
    
 #include <unistd.h>
+#include <omp.h>
 #include "quadtree.h"
 
 
@@ -144,6 +145,7 @@ void Quadtree::multiInsert(Agent &agent) {
 
 void Quadtree::reset() {
     agents.clear();
+    #pragma omp parallel for
     for(int i = 0; i < 4; i++){
         if (children[i] != nullptr) {
             children[i]->reset();  

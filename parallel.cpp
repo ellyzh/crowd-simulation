@@ -23,8 +23,8 @@
 #include <omp.h>
 #include <SDL2/SDL.h>
 
-const int WINDOW_WIDTH = 1028;
-const int WINDOW_HEIGHT = 1028;
+const int WINDOW_WIDTH = 800;
+const int WINDOW_HEIGHT = 800;
 
 int CELL_WIDTH;
 int CELL_HEIGHT;
@@ -55,10 +55,8 @@ void check_collisions(Agent &agent, std::vector<Agent>& agents, int dimX, int di
     // 0 1 2 3
 
     for(int i = 0; i < agents.size(); i++) {
-        if (agent.next_x == agents[i].next_x && agent.next_y == agents[i].next_y || agents[i].next_x == agent.x_pos && agents[i].next_y == agent.y_pos) {
-            // agents[i].next_x = agents[i].x_pos;
-            // agents[i].next_y = agents[i].y_pos;
-
+        if (agents[i].id != agent.id && (agent.next_x == agents[i].next_x && agent.next_y == agents[i].next_y)) {
+            //  || (agents[i].next_x == agent.x_pos && agents[i].next_y == agent.y_pos)
             if(agents[i].dir == 0){ 
                 agents[i].dir = 2;
                 agents[i].next_y = agents[i].y_pos + 1; 
@@ -77,12 +75,14 @@ void check_collisions(Agent &agent, std::vector<Agent>& agents, int dimX, int di
             }
             else if(agents[i].dir == 2){
                 agents[i].dir = 0;
+                agents[i].next_y = agents[i].y_pos - 1;
                 if(agents[i].next_y > dimY -1 || agents[i].next_y < 0){
                     agents[i].next_y = agents[i].y_pos;
                 }
             }
             else{
                 agents[i].dir = 1;
+                agents[i].next_x = agents[i].x_pos + 1;
                 if(agents[i].next_x > dimX -1 || agents[i].next_x < 0){
                     agents[i].next_x = agents[i].x_pos;
                 }
@@ -106,12 +106,14 @@ void check_collisions(Agent &agent, std::vector<Agent>& agents, int dimX, int di
             }
             else if(agent.dir == 2){
                 agent.dir = 0;
+                agent.next_y = agent.y_pos - 1;
                 if(agent.next_y > dimY -1 || agent.next_y < 0){
                     agent.next_y = agent.y_pos;
                 }
             }
             else{
                 agent.dir = 1;
+                agent.next_x = agent.x_pos + 1;
                 if(agent.next_x > dimX -1 || agent.next_x < 0){
                     agent.next_x = agent.x_pos;
                 }
@@ -176,55 +178,20 @@ void move_agent(int agent_id, Agent &agent, int dimX, int dimY, std::mt19937 gen
             direction = 3;
         }
     }
+
     else if ((currX == dimX-1 && agent.dir == 1) || (currX == 0 && agent.dir == 3) || (currY == dimY-1 && agent.dir == 2) || (currY == 0 && agent.dir == 0)){
         // agent is on edge
         if (currX == dimX-1) { // right
-            int next_dir = dist_3(generator); 
-            if (next_dir == 0){
-                direction = 0;    
-            }
-            else if(next_dir == 1){
-                direction = 2;
-            }
-            else{
-                direction = 3;
-            }
+            direction = 3;
         }
         else if (currX == 0) { // left
-            int next_dir = dist_3(generator); 
-            if (next_dir == 0) {
-                direction = 0;
-            }
-            else if (next_dir == 1) {
-                direction = 1;
-            }
-            else {
-                direction = 2;
-            }
+            direction = 1;
         }
         else if(currY == dimY-1){ // bottom
-            int next_dir = dist_3(generator); 
-            if (next_dir == 0){ 
-                direction = 3;
-            }
-            else if(next_dir == 1){ 
-                direction = 0;
-            }
-            else{ 
-                direction = 1;
-            }
+            direction = 0;
         }
         else { // top
-            int next_dir = dist_3(generator); 
-            if (next_dir == 0){ 
-                direction = 1; 
-            }
-            else if(next_dir == 1){ 
-                direction = 2;
-            }
-            else{ 
-                direction = 3;
-            }
+            direction = 2;
         }
     }
     else { // free space
@@ -338,7 +305,7 @@ void render_agents(SDL_Renderer* renderer, const std::vector<Agent>& agents, int
 
         render_agents(renderer, agents, dim_x, dim_y, agent_colors);
 
-        SDL_Delay(500);  
+        SDL_Delay(100);  
 
         if(!is_in_range(agents, num_agents, dim_x, dim_y)){
             printf("AGENT NOT IN RANGE\n");
@@ -400,11 +367,15 @@ int main(int argc, char *argv[]) {
     fin >> dim_x >> dim_y >> num_agents;
    
     std::vector<Agent> agents(num_agents);
+
+    int id_counter = 0;
   
     for (auto& agent : agents) {
         fin >> agent.x_pos >> agent.y_pos >> agent.dir;
         agent.next_x = agent.x_pos;
         agent.next_y = agent.y_pos;
+        agent.id = id_counter;
+        id_counter++;
     }
    
     const double init_time = std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::steady_clock::now() - init_start).count();

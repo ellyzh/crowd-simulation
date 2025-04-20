@@ -56,7 +56,7 @@ void check_collisions(std::vector<Agent>& agents, int num_agents, int dimX, int 
     for(int i = 0; i < num_agents; i++) {
         for(int j = i; j < num_agents; j++) {
             // collision detected
-            if (i != j && agents[i].next_x == agents[j].next_x && agents[i].next_y == agents[j].next_y || agents[i].next_x == agents[j].x_pos && agents[i].next_y == agents[j].y_pos) {
+            if (i != j && agents[i].next_x == agents[j].next_x && agents[i].next_y == agents[j].next_y) {
 
                 // agents[i]
                 if(agents[i].dir == 0){
@@ -185,52 +185,16 @@ void move_agent(int agent_id, Agent &agent, int dimX, int dimY, std::mt19937 gen
     else if ((currX == dimX-1 && agent.dir == 1) || (currX == 0 && agent.dir == 3) || (currY == dimY-1 && agent.dir == 2) || (currY == 0 && agent.dir == 0)){
         // agent is on edge
         if (currX == dimX-1) { // right
-            int next_dir = dist_3(generator); 
-            if (next_dir == 0){
-                direction = 0;    
-            }
-            else if(next_dir == 1){
-                direction = 2;
-            }
-            else{
-                direction = 3;
-            }
+            direction = 3;
         }
         else if (currX == 0) { // left
-            int next_dir = dist_3(generator); 
-            if (next_dir == 0) {
-                direction = 0;
-            }
-            else if (next_dir == 1) {
-                direction = 1;
-            }
-            else {
-                direction = 2;
-            }
+            direction = 1;
         }
         else if(currY == dimY-1){ // bottom
-            int next_dir = dist_3(generator); 
-            if (next_dir == 0){ 
-                direction = 3;
-            }
-            else if(next_dir == 1){
-                direction = 0;
-            }
-            else{ 
-                direction = 1;
-            }
+            direction = 0;
         }
         else { // top
-            int next_dir = dist_3(generator); 
-            if (next_dir == 0){ 
-                direction = 1; 
-            }
-            else if(next_dir == 1){ 
-                direction = 2;
-            }
-            else{
-                direction = 3;
-            }
+            direction = 2;
         }
     }
     else { // free space
