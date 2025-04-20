@@ -41,14 +41,6 @@ bool is_in_range(std::vector<Agent> agents, int num_agents, int dim_x, int dim_y
     return true;
 }
   
-void update_positions(std::vector<Agent>& agents, int num_agents) {
-    #pragma omp parallel for
-    for(int i = 0; i < num_agents; i++) {
-        agents[i].x_pos = agents[i].next_x;
-        agents[i].y_pos = agents[i].next_y;
-    }
-}
-  
 void check_collisions(Agent &agent, std::vector<Agent>& agents, int dimX, int dimY) {
 
     // N E S W
@@ -281,14 +273,16 @@ void render_agents(SDL_Renderer* renderer, const std::vector<Agent>& agents, int
         }
         // clear quadtree
         qt.reset();
-            
-        #pragma omp parallel for
-        for (int i = 0; i < num_agents; i++) {
-            std::random_device rd;  
-            std::mt19937 generator(rd()); 
-            move_agent(i, agents[i], dim_x, dim_y, generator);
-        } 
-            
+
+        #pragma omp parallel
+        {
+            std::mt19937 generator(std::random_device{}() + omp_get_thread_num());
+            #pragma omp for
+            for (int i = 0; i < num_agents; i++) {
+                move_agent(i, agents[i], dim_x, dim_y, generator);
+            }
+        }
+   
         // build quadtree by inserting elements
         for (int i = 0; i < num_agents; i++) {
             qt.multiInsert(agents[i]); // if needed: make this thread-safe
@@ -301,7 +295,11 @@ void render_agents(SDL_Renderer* renderer, const std::vector<Agent>& agents, int
             check_collisions(agents[i], to_compare, dim_x, dim_y);
         }
 
-        update_positions(agents, num_agents);
+        #pragma omp parallel for
+        for(int i = 0; i < num_agents; i++) {
+            agents[i].x_pos = agents[i].next_x;
+            agents[i].y_pos = agents[i].next_y;
+        }
 
         render_agents(renderer, agents, dim_x, dim_y, agent_colors);
 
@@ -338,7 +336,6 @@ int main(int argc, char *argv[]) {
         case 'n':
             num_threads = atoi(optarg);
             break;
-
         default:
             std::cerr << "Usage: " << argv[0] << " -f input_filename\n";
             exit(EXIT_FAILURE);
@@ -395,46 +392,51 @@ int main(int argc, char *argv[]) {
    
     const auto compute_start = std::chrono::steady_clock::now();
   
-    visualize_simulation(agents, dim_x, dim_y, num_agents, num_iterations, agent_colors);
+    //visualize_simulation(agents, dim_x, dim_y, num_agents, num_iterations, agent_colors);
 
-    // int iteration_count = 0;
+    
+    int iteration_count = 0;
 
-    // Quadtree qt(0, 0, dim_x-1, dim_y-1, 0);
+    Quadtree qt(0, 0, dim_x-1, dim_y-1, 0);
 
-    // while (iteration_count < num_iterations) {
-    //     // clear quadtree
-    //     qt.reset();
+    while (iteration_count < num_iterations) {
+        // clear quadtree
+        qt.reset();
+
+        #pragma omp parallel
+        {
+            std::mt19937 generator(std::random_device{}() + omp_get_thread_num());
+            #pragma omp for
+            for (int i = 0; i < num_agents; i++) {
+                move_agent(i, agents[i], dim_x, dim_y, generator);
+            }
+        }
             
-    //     #pragma omp parallel for
-    //     for (int i = 0; i < num_agents; i++) {
-    //         std::random_device rd;  
-    //         std::mt19937 generator(rd()); 
-    //         move_agent(i, agents[i], dim_x, dim_y, generator);
-    //     } 
-            
-    //     // build quadtree by inserting elements
-    //     for (int i = 0; i < num_agents; i++) {
-    //         qt.multiInsert(agents[i]); // if needed: make this thread-safe
-    //     }
+        // build quadtree by inserting elements
+        for (int i = 0; i < num_agents; i++) {
+            qt.multiInsert(agents[i]); // if needed: make this thread-safe
+        }
 
-    //     for (int i = 0; i < num_agents; i++){
-    //         Quadtree *leaf = qt.get_leaf(agents[i]);
-    //         // query quadtree to find which nodes could possibly collide
-    //         std::vector<Agent> to_compare = leaf->collidable_agents();
-    //         check_collisions(agents[i], to_compare);
-    //     }
+        for (int i = 0; i < num_agents; i++){
+            Quadtree *leaf = qt.get_leaf(agents[i]);
+            // query quadtree to find which nodes could possibly collide
+            std::vector<Agent> to_compare = leaf->collidable_agents();
+            check_collisions(agents[i], to_compare, dim_x, dim_y);
+        }
 
-    //     #pragma omp parallel for
-    //     for (int i = 0; i < num_agents; i++){
-    //         update_positions(agents, num_agents);
-    //     }
+        #pragma omp parallel for
+        for(int i = 0; i < num_agents; i++) {
+            agents[i].x_pos = agents[i].next_x;
+            agents[i].y_pos = agents[i].next_y;
+        }
 
-    //     iteration_count += 1;
+        iteration_count += 1;
   
-    //     if(!is_in_range(agents, num_agents, dim_x, dim_y)){
-    //         printf("AGENT NOT IN RANGE\n");
-    //     }
-    //}
+        if(!is_in_range(agents, num_agents, dim_x, dim_y)){
+            printf("AGENT NOT IN RANGE\n");
+        }
+    }
+    
     
     const double compute_time = std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::steady_clock::now() - compute_start).count();
   
