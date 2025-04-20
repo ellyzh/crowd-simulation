@@ -50,48 +50,77 @@ void update_positions(std::vector<Agent>& agents, int num_agents) {
     }
 }
 
-void check_collisions(std::vector<Agent>& agents, int num_agents) {
+
+void check_collisions(std::vector<Agent>& agents, int num_agents, int dimX, int dimY) {
 
     for(int i = 0; i < num_agents; i++) {
         for(int j = i; j < num_agents; j++) {
             // collision detected
-            if (i != j && agents[i].next_x == agents[j].next_x && agents[i].next_y == agents[j].next_y) {
+            if (i != j && agents[i].next_x == agents[j].next_x && agents[i].next_y == agents[j].next_y || agents[i].next_x == agents[j].x_pos && agents[i].next_y == agents[j].y_pos) {
 
                 // agents[i]
                 if(agents[i].dir == 0){
                     agents[i].dir = 2;
+                    agents[i].next_y = agents[i].y_pos + 1; 
+
+                    if(agents[i].next_y > dimY -1 || agents[i].next_y < 0){
+                        agents[i].next_y = agents[i].y_pos;
+                    }
                 }
                 else if(agents[i].dir == 1){
                     agents[i].dir = 3;
+                    agents[i].next_x = agents[i].x_pos - 1;
+
+                    if(agents[i].next_x > dimX -1 || agents[i].next_x < 0){
+                        agents[i].next_x = agents[i].x_pos;
+                    }
                 }
                 else if(agents[i].dir == 2){
                     agents[i].dir = 0;
+                    agents[i].next_y = agents[i].y_pos - 1;
+
+                    if(agents[i].next_y > dimY -1 || agents[i].next_y < 0){
+                        agents[i].next_y = agents[i].y_pos;
+                    }
                 }
                 else{
                     agents[i].dir = 1;
+                    agents[i].next_x = agents[i].x_pos + 1;
+                    if(agents[i].next_x > dimX -1 || agents[i].next_x < 0){
+                        agents[i].next_x = agents[i].x_pos;
+                    }
                 }
                 
                 //  agents[j]
                 if(agents[j].dir == 0){
                     agents[j].dir = 2;
+                    agents[j].next_y = agents[j].y_pos + 1; 
+                    if(agents[j].next_y > dimY -1 || agents[j].next_y < 0){
+                        agents[j].next_y = agents[j].y_pos;
+                    }
                 }
                 else if(agents[j].dir == 1){
                     agents[j].dir = 3;
+                    agents[j].next_x = agents[j].x_pos - 1;
+                    if(agents[j].next_x > dimX -1 || agents[j].next_x < 0){
+                        agents[j].next_x = agents[j].x_pos;
+                    }
                     
                 }
                 else if(agents[j].dir == 2){
                     agents[j].dir = 0;
-
+                    agents[j].next_y = agents[j].y_pos - 1;
+                    if(agents[j].next_y > dimY -1 || agents[j].next_y < 0){
+                        agents[j].next_y = agents[j].y_pos;
+                    }
                 }
                 else{
                     agents[j].dir = 1;
-
+                    agents[j].next_x = agents[j].x_pos + 1;
+                    if(agents[j].next_x > dimX -1 || agents[j].next_x < 0){
+                        agents[j].next_x = agents[j].x_pos;
+                    }
                 }
-                // directions have been reset
-                agents[i].next_x = agents[i].x_pos;
-                agents[i].next_y = agents[i].y_pos;
-                agents[j].next_x = agents[j].x_pos;
-                agents[j].next_y = agents[j].y_pos;
             }
         }
     }
@@ -224,30 +253,33 @@ void move_agent(int agent_id, Agent &agent, int dimX, int dimY, std::mt19937 gen
     if(agent.next_x > dimX -1 || agent.next_x < 0 || agent.next_y > dimY -1|| agent.next_y < 0){
         printf("OUT OF RANGE NEXT X Y, %d %d", agent.next_x, agent.next_y);
     }
+    agent.dir = direction;
     return;
 }
 
 
-void render_agents(SDL_Renderer* renderer, const std::vector<Agent>& agents, int dim_x, int dim_y) {
+void render_agents(SDL_Renderer* renderer, const std::vector<Agent>& agents, int dim_x, int dim_y, const std::vector<std::tuple<int, int, int>>& agent_colors) {
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255); // white background
     SDL_RenderClear(renderer);
 
-    for (const auto& agent : agents) {
-        SDL_SetRenderDrawColor(renderer, 0, 100, 255, 255); // blue agents
+    for (size_t i = 0; i < agents.size(); ++i) {
+        const auto& agent = agents[i];
+        const auto& [r, g, b] = agent_colors[i];
+    
+        SDL_SetRenderDrawColor(renderer, r, g, b, 255);
         SDL_Rect rect;
         rect.x = agent.x_pos * CELL_WIDTH;
         rect.y = agent.y_pos * CELL_HEIGHT;
         rect.w = CELL_WIDTH;
         rect.h = CELL_HEIGHT;
         SDL_RenderFillRect(renderer, &rect);
-
     }
 
     SDL_RenderPresent(renderer);
 }
 
 
- void visualize_simulation(std::vector<Agent>& agents, int dim_x, int dim_y, int num_agents, int num_iterations) {
+ void visualize_simulation(std::vector<Agent>& agents, int dim_x, int dim_y, int num_agents, int num_iterations,  const std::vector<std::tuple<int, int, int>>& agent_colors) {
     SDL_Init(SDL_INIT_VIDEO);
     SDL_Window* window = SDL_CreateWindow("Crowd Simulation",
                                           SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
@@ -275,12 +307,12 @@ void render_agents(SDL_Renderer* renderer, const std::vector<Agent>& agents, int
             move_agent(i, agents[i], dim_x, dim_y, generator);
         }
 
-        check_collisions(agents, num_agents);
+        check_collisions(agents, num_agents, dim_x, dim_y);
         update_positions(agents, num_agents);
 
-        render_agents(renderer, agents, dim_x, dim_y);
+        render_agents(renderer, agents, dim_x, dim_y, agent_colors);
 
-        SDL_Delay(100);  
+        SDL_Delay(500);  
         if(!is_in_range(agents, num_agents, dim_x, dim_y)){
             printf("AGENT NOT IN RANGE\n");
         }
@@ -342,7 +374,20 @@ int main(int argc, char *argv[]) {
         agent.next_x = agent.x_pos;
         agent.next_y = agent.y_pos;
     }
- 
+
+    std::vector<std::tuple<int, int, int>> agent_colors;
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> color_dist(0, 255);
+
+    for (int i = 0; i < num_agents; i++) {
+        agent_colors.push_back({
+            color_dist(gen), color_dist(gen), color_dist(gen)
+        });
+    }
+
+
     const double init_time = std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::steady_clock::now() - init_start).count();
     std::cout << "Initialization time (sec): " << std::fixed << std::setprecision(10) << init_time << '\n';
  
@@ -351,24 +396,24 @@ int main(int argc, char *argv[]) {
     int iteration_count = 0;
 
     // uncomment the following line to use the simulation
-    // visualize_simulation(agents, dim_x, dim_y, num_agents, num_iterations);
+    visualize_simulation(agents, dim_x, dim_y, num_agents, num_iterations, agent_colors);
 
-    while (iteration_count < num_iterations) {
+    // while (iteration_count < num_iterations) {
 
-        for (int i = 0; i < num_agents; i++) {
-            std::random_device rd;  
-            std::mt19937 generator(rd()); 
-            move_agent(i, agents[i], dim_x, dim_y, generator);
-        }
+    //     for (int i = 0; i < num_agents; i++) {
+    //         std::random_device rd;  
+    //         std::mt19937 generator(rd()); 
+    //         move_agent(i, agents[i], dim_x, dim_y, generator);
+    //     }
 
-        check_collisions(agents, num_agents);
-        update_positions(agents, num_agents);
-        iteration_count += 1;
+    //     check_collisions(agents, num_agents);
+    //     update_positions(agents, num_agents);
+    //     iteration_count += 1;
 
-        if(!is_in_range(agents, num_agents, dim_x, dim_y)){
-            printf("AGENT NOT IN RANGE\n");
-        }
-    }
+    //     if(!is_in_range(agents, num_agents, dim_x, dim_y)){
+    //         printf("AGENT NOT IN RANGE\n");
+    //     }
+    // }
   
     const double compute_time = std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::steady_clock::now() - compute_start).count();
 
