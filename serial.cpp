@@ -22,7 +22,7 @@ struct Agent {
 #include <climits>
  
 #include <unistd.h>
-#include <SDL2/SDL.h>
+// #include <SDL2/SDL.h>
 
 const int WINDOW_WIDTH = 800;
 const int WINDOW_HEIGHT = 800;
@@ -222,72 +222,72 @@ void move_agent(int agent_id, Agent &agent, int dimX, int dimY, std::mt19937 gen
 }
 
 
-void render_agents(SDL_Renderer* renderer, const std::vector<Agent>& agents, int dim_x, int dim_y, const std::vector<std::tuple<int, int, int>>& agent_colors) {
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255); // white background
-    SDL_RenderClear(renderer);
+// void render_agents(SDL_Renderer* renderer, const std::vector<Agent>& agents, int dim_x, int dim_y, const std::vector<std::tuple<int, int, int>>& agent_colors) {
+//     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255); // white background
+//     SDL_RenderClear(renderer);
 
-    for (size_t i = 0; i < agents.size(); ++i) {
-        const auto& agent = agents[i];
-        const auto& [r, g, b] = agent_colors[i];
+//     for (size_t i = 0; i < agents.size(); ++i) {
+//         const auto& agent = agents[i];
+//         const auto& [r, g, b] = agent_colors[i];
     
-        SDL_SetRenderDrawColor(renderer, r, g, b, 255);
-        SDL_Rect rect;
-        rect.x = agent.x_pos * CELL_WIDTH;
-        rect.y = agent.y_pos * CELL_HEIGHT;
-        rect.w = CELL_WIDTH;
-        rect.h = CELL_HEIGHT;
-        SDL_RenderFillRect(renderer, &rect);
-    }
+//         SDL_SetRenderDrawColor(renderer, r, g, b, 255);
+//         SDL_Rect rect;
+//         rect.x = agent.x_pos * CELL_WIDTH;
+//         rect.y = agent.y_pos * CELL_HEIGHT;
+//         rect.w = CELL_WIDTH;
+//         rect.h = CELL_HEIGHT;
+//         SDL_RenderFillRect(renderer, &rect);
+//     }
 
-    SDL_RenderPresent(renderer);
-}
+//     SDL_RenderPresent(renderer);
+// }
 
 
- void visualize_simulation(std::vector<Agent>& agents, int dim_x, int dim_y, int num_agents, int num_iterations,  const std::vector<std::tuple<int, int, int>>& agent_colors) {
-    SDL_Init(SDL_INIT_VIDEO);
-    SDL_Window* window = SDL_CreateWindow("Crowd Simulation",
-                                          SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-                                          WINDOW_WIDTH, WINDOW_HEIGHT,
-                                          SDL_WINDOW_SHOWN);
-    SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+//  void visualize_simulation(std::vector<Agent>& agents, int dim_x, int dim_y, int num_agents, int num_iterations,  const std::vector<std::tuple<int, int, int>>& agent_colors) {
+//     SDL_Init(SDL_INIT_VIDEO);
+//     SDL_Window* window = SDL_CreateWindow("Crowd Simulation",
+//                                           SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+//                                           WINDOW_WIDTH, WINDOW_HEIGHT,
+//                                           SDL_WINDOW_SHOWN);
+//     SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 
-    CELL_WIDTH = WINDOW_WIDTH / dim_x;
-    CELL_HEIGHT = WINDOW_HEIGHT / dim_y;
+//     CELL_WIDTH = WINDOW_WIDTH / dim_x;
+//     CELL_HEIGHT = WINDOW_HEIGHT / dim_y;
 
-    bool quit = false;
-    SDL_Event event;
+//     bool quit = false;
+//     SDL_Event event;
 
-    int iteration_count = 0;
+//     int iteration_count = 0;
 
-    while (!quit && iteration_count < num_iterations) {
-        while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_QUIT)
-                quit = true;
-        }
+//     while (!quit && iteration_count < num_iterations) {
+//         while (SDL_PollEvent(&event)) {
+//             if (event.type == SDL_QUIT)
+//                 quit = true;
+//         }
 
-        for (int i = 0; i < num_agents; i++) {
-            std::random_device rd;
-            std::mt19937 generator(rd());
-            move_agent(i, agents[i], dim_x, dim_y, generator);
-        }
+//         for (int i = 0; i < num_agents; i++) {
+//             std::random_device rd;
+//             std::mt19937 generator(rd());
+//             move_agent(i, agents[i], dim_x, dim_y, generator);
+//         }
 
-        check_collisions(agents, num_agents, dim_x, dim_y);
-        update_positions(agents, num_agents);
+//         check_collisions(agents, num_agents, dim_x, dim_y);
+//         update_positions(agents, num_agents);
 
-        render_agents(renderer, agents, dim_x, dim_y, agent_colors);
+//         render_agents(renderer, agents, dim_x, dim_y, agent_colors);
 
-        SDL_Delay(500);  
-        if(!is_in_range(agents, num_agents, dim_x, dim_y)){
-            printf("AGENT NOT IN RANGE\n");
-        }
+//         SDL_Delay(500);  
+//         if(!is_in_range(agents, num_agents, dim_x, dim_y)){
+//             printf("AGENT NOT IN RANGE\n");
+//         }
 
-        iteration_count++;
-    }
+//         iteration_count++;
+//     }
 
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
-    SDL_Quit();
-}
+//     SDL_DestroyRenderer(renderer);
+//     SDL_DestroyWindow(window);
+//     SDL_Quit();
+// }
 
 
 int main(int argc, char *argv[]) {
@@ -360,24 +360,24 @@ int main(int argc, char *argv[]) {
     int iteration_count = 0;
 
     // uncomment the following line to use the simulation
-    visualize_simulation(agents, dim_x, dim_y, num_agents, num_iterations, agent_colors);
+    // visualize_simulation(agents, dim_x, dim_y, num_agents, num_iterations, agent_colors);
 
-    // while (iteration_count < num_iterations) {
+    while (iteration_count < num_iterations) {
 
-    //     for (int i = 0; i < num_agents; i++) {
-    //         std::random_device rd;  
-    //         std::mt19937 generator(rd()); 
-    //         move_agent(i, agents[i], dim_x, dim_y, generator);
-    //     }
+        for (int i = 0; i < num_agents; i++) {
+            std::random_device rd;  
+            std::mt19937 generator(rd()); 
+            move_agent(i, agents[i], dim_x, dim_y, generator);
+        }
 
-    //     check_collisions(agents, num_agents);
-    //     update_positions(agents, num_agents);
-    //     iteration_count += 1;
+        check_collisions(agents, num_agents, dim_x, dim_y);
+        update_positions(agents, num_agents);
+        iteration_count += 1;
 
-    //     if(!is_in_range(agents, num_agents, dim_x, dim_y)){
-    //         printf("AGENT NOT IN RANGE\n");
-    //     }
-    // }
+        if(!is_in_range(agents, num_agents, dim_x, dim_y)){
+            printf("AGENT NOT IN RANGE\n");
+        }
+    }
   
     const double compute_time = std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::steady_clock::now() - compute_start).count();
 

@@ -151,6 +151,7 @@ void Quadtree::reset() {
             children[i]->reset();  
             children[i].reset(); 
         }
+        // omp_destroy_lock(&locks[i]);
     }
 }
 
