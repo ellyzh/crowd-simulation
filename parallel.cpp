@@ -114,8 +114,7 @@ void resolve_collisions(std::vector<int> colliders, std::vector<Agent>& agents, 
 }
 
 
-void detect_collisions(std::vector<int> colliders, std::vector<Agent>& agents, int num_agents, Quadtree* qt) {
-    
+void detect_collisions(std::vector<int>& colliders, std::vector<Agent>& agents, int num_agents, Quadtree* qt) {
     #pragma omp parallel for schedule(dynamic)
     for (int i = 0; i < num_agents; i++) {
         Quadtree* leaf = qt->get_leaf(agents[i]);
@@ -263,6 +262,7 @@ void render_agents(SDL_Renderer* renderer, const std::vector<Agent>& agents, int
         SDL_RenderFillRect(renderer, &rect);
     }
     SDL_RenderPresent(renderer);
+
 }
 
 
@@ -303,6 +303,11 @@ void render_agents(SDL_Renderer* renderer, const std::vector<Agent>& agents, int
             }
         }
 
+        #pragma omp parallel for schedule(dynamic)
+        for (int i = 0; i < num_agents; i++) {
+            qt.multiInsert(agents[i]); 
+        }
+
         std::vector<int> colliders(num_agents, -1);
         detect_collisions(colliders, agents, num_agents, &qt);
         resolve_collisions(colliders, agents, num_agents, dim_x, dim_y);
@@ -320,10 +325,7 @@ void render_agents(SDL_Renderer* renderer, const std::vector<Agent>& agents, int
         if(!is_in_range(agents, num_agents, dim_x, dim_y)){
             printf("AGENT NOT IN RANGE\n");
         }
-
-  
         iteration_count += 1;
-
     }
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
