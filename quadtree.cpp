@@ -104,16 +104,21 @@ std::vector<int> Quadtree::getMultiQuadrant(Agent &agent) {
 
 void Quadtree::multiInsert(Agent &agent) {
 
+    omp_set_lock(&lock);
+
     if (children[0] != nullptr) { // has quadtree children/is not a leaf
         std::vector<int> indices = getMultiQuadrant(agent);
+        omp_unset_lock(&lock);
+
         if (!indices.empty()) {
             for (auto index: indices) {
                 // insert node
                 children[index]->multiInsert(agent);
             }
-            return;
         }
+        return;
     }
+    // lock is still set
 
     // try to add to node itself (is leaf)
     agents.push_back(agent);
@@ -129,17 +134,24 @@ void Quadtree::multiInsert(Agent &agent) {
             std::vector<int> indices = getMultiQuadrant(agents[i]);
 
             if (!indices.empty()) {
-                for (auto index:indices) {
-                    children[index]->multiInsert(agents[i]);
-                }
+                Agent moved = agents[i]; 
                 // remove from parent
+    
                 agents.erase(agents.begin() + i);
+
+                omp_unset_lock(&lock);
+
+                for (auto index:indices) {
+                    children[index]->multiInsert(moved);
+                }
+                omp_set_lock(&lock);
             }
             else {
                 i+=1;
             }
         }
     }
+    omp_unset_lock(&lock);
 }
 
 
@@ -151,7 +163,6 @@ void Quadtree::reset() {
             children[i]->reset();  
             children[i].reset(); 
         }
-        // omp_destroy_lock(&locks[i]);
     }
 }
 

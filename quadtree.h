@@ -9,6 +9,8 @@
  #include <array>
  #include <vector>
  #include <memory> 
+ #include <omp.h>
+
 
  const int max_agents = 4;
  const int max_depth = 5;
@@ -23,7 +25,8 @@
          // bounds
          int min_x, min_y, max_x, max_y;
          int depth;
-        //  omp_lock_t locks[4];
+         
+         omp_lock_t lock;
  
          std::vector<Agent> agents;
          std::array<std::unique_ptr<Quadtree>, 4> children;
@@ -32,8 +35,12 @@
         min_x(min_x), min_y(min_y), max_x(max_x), max_y(max_y), depth(depth){
             for (int i = 0; i < 4; i++) {
                 children[i] = nullptr;
-                // omp_init_lock(&locks[i]);
             }
+            omp_init_lock(&lock);
+        }
+
+        ~Quadtree() {
+            omp_destroy_lock(&lock);
         }
         
         void split();
