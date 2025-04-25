@@ -51,6 +51,7 @@
         void reset();
         Quadtree *get_leaf(Agent &agent);
         std::vector<Agent> collidable_agents();
+        void remove(Agent &agent);
  };
  
  #endif

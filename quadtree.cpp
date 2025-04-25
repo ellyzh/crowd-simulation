@@ -183,3 +183,30 @@ std::vector<Agent> Quadtree::collidable_agents() {
     std::vector<Agent> collidable = agents;
     return collidable;
 }
+
+void Quadtree::remove(Agent &agent) {
+    omp_set_lock(&lock);
+
+    if (children[0] != nullptr) {
+        std::vector<int> indices = getMultiQuadrant(agent);
+        omp_unset_lock(&lock);
+
+        for (int index : indices) {
+            if (children[index]) {
+                children[index]->remove(agent);
+          
+            }
+        }
+        return;
+    }
+    // erase the agent
+
+    agents.erase(
+        std::remove_if(agents.begin(), agents.end(), [&](const Agent& a) {
+            return a.id == agent.id;
+        }),
+        agents.end()
+    );
+
+    omp_unset_lock(&lock);
+}
