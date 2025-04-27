@@ -13,7 +13,7 @@
 
 
  const int max_agents = 4;
- const int max_depth = 5;
+ const int max_depth = 8;
 
  struct Agent {
     int x_pos, y_pos, dir, next_x, next_y;
@@ -25,10 +25,14 @@
          // bounds
          int min_x, min_y, max_x, max_y;
          int depth;
+         static int next_id;
+         int id;
          
          omp_lock_t lock;
  
-         std::vector<Agent> agents;
+         //std::vector<Agent> agents;
+         std::vector<Agent*> agents;
+
          std::array<std::unique_ptr<Quadtree>, 4> children;
  
         Quadtree(int min_x, int min_y, int max_x, int max_y, int depth):
@@ -37,6 +41,9 @@
                 children[i] = nullptr;
             }
             omp_init_lock(&lock);
+
+            #pragma omp atomic capture
+            id = next_id++;
         }
 
         ~Quadtree() {
@@ -45,12 +52,16 @@
         
         void split();
         int getQuadrant(Agent &agent);
-        std::vector<int> getMultiQuadrant(Agent &agent);
+        std::vector<int> getMultiQuadrant(const Agent &agent);
         void insert(Agent &agent);
-        void multiInsert(Agent &agent);
+        void multiInsert(Agent *agent);
         void reset();
         Quadtree *get_leaf(Agent &agent);
-        std::vector<Agent> collidable_agents();
+        std::vector<Agent*> collidable_agents();
+        //void remove(Agent &agent);
+        void multiRemove(Agent *agent);
+        void get_leaf_nodes(Agent& agent, std::vector<int>& leaves);
+        void multiInsert_2(Agent *agent, std::vector<std::vector<int>>&  leaves);
  };
  
  #endif
