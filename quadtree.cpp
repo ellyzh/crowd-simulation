@@ -28,7 +28,7 @@
      int midX = (min_x + max_x) / 2;
      int midY = (min_y + max_y) / 2;
  
-     std::cout << "Splitting node (" << min_x << "," << min_y << ") - (" << max_x << "," << max_y << ")\n";
+     //std::cout << "Splitting node (" << min_x << "," << min_y << ") - (" << max_x << "," << max_y << ")\n";
  
      #pragma omp parallel sections 
      {
@@ -83,82 +83,82 @@
      return -1;
  }
  
-//  std::vector<int> Quadtree::getMultiQuadrant(const Agent &agent) {
-//      int midX = (min_x + max_x) / 2;
-//      int midY = (min_y + max_y) / 2;
+ std::vector<int> Quadtree::getMultiQuadrant(const Agent &agent) {
+     int midX = (min_x + max_x) / 2;
+     int midY = (min_y + max_y) / 2;
  
-//      std::vector<int> possible_quadrants;
+     std::vector<int> possible_quadrants;
  
-//      bool top = agent.y_pos <= midY + 2;
-//      bool bottom = agent.y_pos >= midY - 1;
-//      bool right = agent.x_pos >= midX - 1;
-//      bool left = agent.x_pos <= midX + 2;
+     bool top = agent.y_pos <= midY + 2;
+     bool bottom = agent.y_pos >= midY - 1;
+     bool right = agent.x_pos >= midX - 1;
+     bool left = agent.x_pos <= midX + 2;
  
-//      if (top && left) { 
-//          possible_quadrants.push_back(0);
-//      }
-//      if (top && right) { 
-//          possible_quadrants.push_back(1);
-//      }
-//      if (bottom && left) { 
-//          possible_quadrants.push_back(2);
-//      }
-//      if (bottom && right) {
-//          possible_quadrants.push_back(3);
-//      }
-//      return possible_quadrants;
-//  }
+     if (top && left) { 
+         possible_quadrants.push_back(0);
+     }
+     if (top && right) { 
+         possible_quadrants.push_back(1);
+     }
+     if (bottom && left) { 
+         possible_quadrants.push_back(2);
+     }
+     if (bottom && right) {
+         possible_quadrants.push_back(3);
+     }
+     return possible_quadrants;
+ }
 
-std::vector<int> Quadtree::getMultiQuadrant(const Agent& agent) {
-    int midX = (min_x + max_x) / 2;
-    int midY = (min_y + max_y) / 2;
+// std::vector<int> Quadtree::getMultiQuadrant(const Agent& agent) {
+//     int midX = (min_x + max_x) / 2;
+//     int midY = (min_y + max_y) / 2;
     
-    std::vector<int> quadrants;
+//     std::vector<int> quadrants;
 
-    if (agent.x_pos == midX) { // on vertical midline
-        if (agent.y_pos < midY) {
-            quadrants.push_back(0);
-            quadrants.push_back(1);
-        } else if (agent.y_pos > midY) {
-            quadrants.push_back(2);
-            quadrants.push_back(3);
-        } else { // exact center
-            quadrants.push_back(0);
-            quadrants.push_back(1);
-            quadrants.push_back(2);
-            quadrants.push_back(3);
-        }
-    } else if (agent.y_pos == midY) { // on horizontal midline
-        if (agent.x_pos < midX) {
-            quadrants.push_back(0);
-            quadrants.push_back(2);
-        } else if (agent.x_pos > midX) {
-            quadrants.push_back(1);
-            quadrants.push_back(3);
-        }
-    } else { // normal non-boundary
-        bool left = agent.x_pos < midX;
-        bool right = agent.x_pos > midX;
-        bool top = agent.y_pos < midY;
-        bool bottom = agent.y_pos > midY;
+//     if (agent.x_pos == midX) { // on vertical midline
+//         if (agent.y_pos < midY) {
+//             quadrants.push_back(0);
+//             quadrants.push_back(1);
+//         } else if (agent.y_pos > midY) {
+//             quadrants.push_back(2);
+//             quadrants.push_back(3);
+//         } else { // exact center
+//             quadrants.push_back(0);
+//             quadrants.push_back(1);
+//             quadrants.push_back(2);
+//             quadrants.push_back(3);
+//         }
+//     } else if (agent.y_pos == midY) { // on horizontal midline
+//         if (agent.x_pos < midX) {
+//             quadrants.push_back(0);
+//             quadrants.push_back(2);
+//         } else if (agent.x_pos > midX) {
+//             quadrants.push_back(1);
+//             quadrants.push_back(3);
+//         }
+//     } else { // normal non-boundary
+//         bool left = agent.x_pos < midX;
+//         bool right = agent.x_pos > midX;
+//         bool top = agent.y_pos < midY;
+//         bool bottom = agent.y_pos > midY;
 
-        if (top && left) quadrants.push_back(0);
-        if (top && right) quadrants.push_back(1);
-        if (bottom && left) quadrants.push_back(2);
-        if (bottom && right) quadrants.push_back(3);
-    }
+//         if (top && left) quadrants.push_back(0);
+//         if (top && right) quadrants.push_back(1);
+//         if (bottom && left) quadrants.push_back(2);
+//         if (bottom && right) quadrants.push_back(3);
+//     }
 
-    return quadrants;
-}
+//     return quadrants;
+// }
 
 
  
- void Quadtree::multiInsert(Agent &agent) {
+ void Quadtree::multiInsert(Agent *agent) {
  
      omp_set_lock(&lock);
  
      if (children[0] != nullptr) { // has quadtree children/is not a leaf
-         std::vector<int> indices = getMultiQuadrant(agent);
+         std::vector<int> indices = getMultiQuadrant(*agent);
          omp_unset_lock(&lock);
  
          if (!indices.empty()) {
@@ -172,6 +172,7 @@ std::vector<int> Quadtree::getMultiQuadrant(const Agent& agent) {
      // lock is still set
  
      // try to add to node itself (is leaf)
+     #pragma omp critical
      agents.push_back(agent);
  
      if (agents.size() > max_agents && depth < max_depth){
@@ -182,10 +183,10 @@ std::vector<int> Quadtree::getMultiQuadrant(const Agent& agent) {
          int i = 0;
  
          while (i < agents.size()){
-             std::vector<int> indices = getMultiQuadrant(agents[i]);
+             std::vector<int> indices = getMultiQuadrant(*agents[i]);
  
              if (!indices.empty()) {
-                 Agent moved = agents[i]; 
+                 Agent* moved = agents[i]; 
                  // remove from parent
      
                  agents.erase(agents.begin() + i);
@@ -230,42 +231,42 @@ std::vector<int> Quadtree::getMultiQuadrant(const Agent& agent) {
  }
          
  
- std::vector<Agent> Quadtree::collidable_agents() {
-     std::vector<Agent> collidable = agents;
+ std::vector<Agent*> Quadtree::collidable_agents() {
+     std::vector<Agent*> collidable = agents;
      return collidable;
  }
  
- void Quadtree::remove(Agent &agent) {
-     omp_set_lock(&lock);
+//  void Quadtree::remove(Agent &agent) {
+//      omp_set_lock(&lock);
  
-     if (children[0] != nullptr) {
-         std::vector<int> indices = getMultiQuadrant(agent);
-         omp_unset_lock(&lock);
+//      if (children[0] != nullptr) {
+//          std::vector<int> indices = getMultiQuadrant(agent);
+//          omp_unset_lock(&lock);
  
-         for (int index : indices) {
-             if (children[index]) {
-                 children[index]->remove(agent);
+//          for (int index : indices) {
+//              if (children[index]) {
+//                  children[index]->remove(agent);
            
-             }
-         }
-         return;
-     }
-     // erase the agent
-     agents.erase(
-         std::remove_if(agents.begin(), agents.end(), [&](const Agent& a) {
-             return a.id == agent.id;
-         }),
-         agents.end()
-     );
+//              }
+//          }
+//          return;
+//      }
+//      // erase the agent
+//      agents.erase(
+//          std::remove_if(agents.begin(), agents.end(), [&](const Agent& a) {
+//              return a.id == agent.id;
+//          }),
+//          agents.end()
+//      );
  
-     omp_unset_lock(&lock);
- }
+//      omp_unset_lock(&lock);
+//  }
  
- void Quadtree::multiRemove(Agent &agent) {
+ void Quadtree::multiRemove(Agent *agent) {
      omp_set_lock(&lock);
  
      if (children[0] != nullptr) { 
-         std::vector<int> indices = getMultiQuadrant(agent);
+         std::vector<int> indices = getMultiQuadrant(*agent);
          omp_unset_lock(&lock);
  
          if (!indices.empty()) {
@@ -279,8 +280,8 @@ std::vector<int> Quadtree::getMultiQuadrant(const Agent& agent) {
      }
  
      agents.erase(
-         std::remove_if(agents.begin(), agents.end(), [&](const Agent& a) {
-             return a.id == agent.id;
+         std::remove_if(agents.begin(), agents.end(), [&](Agent *a) {
+             return a->id == agent->id;
          }),
          agents.end()
      );
@@ -303,12 +304,12 @@ std::vector<int> Quadtree::getMultiQuadrant(const Agent& agent) {
      }
  }
  
- void Quadtree::multiInsert_2(const Agent &agent, std::vector<std::vector<int>>&  leaves) {
+ void Quadtree::multiInsert_2(Agent *agent, std::vector<std::vector<int>>&  leaves) {
  
      omp_set_lock(&lock);
  
      if (children[0] != nullptr) { // not a leaf
-         std::vector<int> quadrants = getMultiQuadrant(agent);
+         std::vector<int> quadrants = getMultiQuadrant(*agent);
          omp_unset_lock(&lock);
  
          if (!quadrants.empty()) {
@@ -321,24 +322,24 @@ std::vector<int> Quadtree::getMultiQuadrant(const Agent& agent) {
      // lock is still set
  
      agents.push_back(agent);
-     leaves[agent.id].push_back(this->id);
+     leaves[agent->id].push_back(this->id);
  
      if (agents.size() > max_agents && depth < max_depth){
          if(children[0] == nullptr){
              split();
          }
-         std::vector<Agent> agents_to_reinsert = agents;
+         std::vector<Agent*> agents_to_reinsert = agents;
          agents.clear();
  
-         for (const Agent& a : agents_to_reinsert) {
-             auto& agent_leaf_ids = leaves[a.id];
+         for (Agent* a : agents_to_reinsert) {
+             auto& agent_leaf_ids = leaves[a->id];
              agent_leaf_ids.erase(std::remove(agent_leaf_ids.begin(), agent_leaf_ids.end(), this->id), agent_leaf_ids.end());
          }
  
          omp_unset_lock(&lock); 
  
-         for (const Agent& moved : agents_to_reinsert) {
-             std::vector<int> quadrants = getMultiQuadrant(moved);
+         for (Agent* moved : agents_to_reinsert) {
+             std::vector<int> quadrants = getMultiQuadrant(*moved);
              for (auto quad : quadrants) {
                  children[quad]->multiInsert_2(moved, leaves);
              }
