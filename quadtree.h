@@ -13,7 +13,7 @@
 
 
  const int max_agents = 4;
- const int max_depth = 8;
+ const int max_depth = 5;
 
  struct Agent {
     int x_pos, y_pos, dir, next_x, next_y;
