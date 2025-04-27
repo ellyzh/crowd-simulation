@@ -379,24 +379,25 @@ void detect_collisions(std::vector<int>& colliders, std::vector<Agent>& agents, 
          agent.id = id_counter;
          id_counter++;
      }
-    
-     const double init_time = std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::steady_clock::now() - init_start).count();
-     std::cout << "Initialization time (sec): " << std::fixed << std::setprecision(10) << init_time << '\n';
- 
+   
      std::vector<std::tuple<int, int, int>> agent_colors;
  
      std::random_device rd;
      std::mt19937 gen(rd());
-     std::uniform_int_distribution<> color_dist(0, 255);
+     // std::uniform_int_distribution<> color_dist(0, 255);
  
-     for (int i = 0; i < num_agents; i++) {
-         agent_colors.push_back({
-             color_dist(gen), color_dist(gen), color_dist(gen)
-         });
-     }
+    //  for (int i = 0; i < num_agents; i++) {
+    //      agent_colors.push_back({
+    //          color_dist(gen), color_dist(gen), color_dist(gen)
+    //      });
+    //  }
     
      std::vector<std::vector<int>> agent_leaves(num_agents);
      Quadtree qt(0, 0, dim_x-1, dim_y-1, 0);
+
+      
+     const double init_time = std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::steady_clock::now() - init_start).count();
+     std::cout << "Initialization time (sec): " << std::fixed << std::setprecision(10) << init_time << '\n';
 
     const auto compute_start = std::chrono::steady_clock::now();
 
