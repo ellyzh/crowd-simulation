@@ -25,6 +25,8 @@
          // bounds
          int min_x, min_y, max_x, max_y;
          int depth;
+         static int next_id;
+         int id;
          
          omp_lock_t lock;
  
@@ -37,6 +39,9 @@
                 children[i] = nullptr;
             }
             omp_init_lock(&lock);
+
+            #pragma omp atomic capture
+            id = next_id++;
         }
 
         ~Quadtree() {
@@ -45,13 +50,16 @@
         
         void split();
         int getQuadrant(Agent &agent);
-        std::vector<int> getMultiQuadrant(Agent &agent);
+        std::vector<int> getMultiQuadrant(const Agent &agent);
         void insert(Agent &agent);
         void multiInsert(Agent &agent);
         void reset();
         Quadtree *get_leaf(Agent &agent);
         std::vector<Agent> collidable_agents();
         void remove(Agent &agent);
+        void multiRemove(Agent &agent);
+        void get_leaf_nodes(Agent& agent, std::vector<int>& leaves);
+        void multiInsert_2(const Agent &agent, std::vector<std::vector<int>>&  leaves);
  };
  
  #endif

@@ -21,7 +21,8 @@
  #include "quadtree.h"
  
  #include <omp.h>
- // #include <SDL2/SDL.h>
+ #include <SDL2/SDL.h>
+ #include <unordered_set>
  
  const int WINDOW_WIDTH = 800;
  const int WINDOW_HEIGHT = 800;
@@ -112,27 +113,53 @@
          }
      }
  }
- 
- 
- void detect_collisions(std::vector<int>& colliders, std::vector<Agent>& agents, int num_agents, Quadtree* qt) {
-     #pragma omp parallel for schedule(dynamic)
-     for (int i = 0; i < num_agents; i++) {
-         Quadtree* leaf = qt->get_leaf(agents[i]);
-         std::vector<Agent> collidable_agents = leaf->collidable_agents();
-     
-         for (const auto& possible_collider : collidable_agents) {
-             if (possible_collider.id != agents[i].id &&
-                 agents[i].next_x == possible_collider.next_x &&
-                 agents[i].next_y == possible_collider.next_y) {
-                 
-                 #pragma omp atomic write
-                 colliders[i] = possible_collider.id;
-                 break; 
-             }
-         }
-     }
- }
- 
+
+
+
+void detect_collisions(std::vector<int>& colliders, std::vector<Agent>& agents, int num_agents, Quadtree* qt) {
+    #pragma omp parallel for schedule(dynamic)
+    for (int i = 0; i < num_agents; i++) {
+        std::vector<int> leaf_ids;
+        qt->get_leaf_nodes(agents[i], leaf_ids);
+        
+        bool collision_found = false;
+
+        for (int leaf_id : leaf_ids) {
+            std::vector<Quadtree*> stack{qt};
+
+            while (!stack.empty() && !collision_found) {
+                Quadtree* node = stack.back();
+                stack.pop_back();
+
+                if (node->id == leaf_id) {
+                    for (const auto& possible_collider : node->collidable_agents()) {
+                        if (possible_collider.id != agents[i].id &&
+                            agents[i].next_x == possible_collider.x_pos &&
+                            agents[i].next_y == possible_collider.y_pos) {
+
+                            #pragma omp atomic write
+                            colliders[i] = possible_collider.id;
+                            collision_found = true;
+                            break; // found collision
+                        }
+                    }
+                } else {
+                    for (int k = 0; k < 4; k++) {
+                        if (node->children[k]) {
+                            stack.push_back(node->children[k].get());
+                        }
+                    }
+                }
+            }
+
+            if (collision_found) {
+                break; 
+            }
+        }
+    }
+}
+
+
  
  // assuming no collisions
  void move_agent(int agent_id, Agent &agent, int dimX, int dimY, std::mt19937 generator) { 
@@ -245,91 +272,25 @@
      }
  }
  
-//  void render_agents(SDL_Renderer* renderer, const std::vector<Agent>& agents, int dim_x, int dim_y, const std::vector<std::tuple<int, int, int>>& agent_colors) {
-//      SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255); // white background
-//      SDL_RenderClear(renderer);
+ void render_agents(SDL_Renderer* renderer, const std::vector<Agent>& agents, int dim_x, int dim_y, const std::vector<std::tuple<int, int, int>>& agent_colors) {
+     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255); // white background
+     SDL_RenderClear(renderer);
  
-//      for (size_t i = 0; i < agents.size(); ++i) {
-//          const auto& agent = agents[i];
-//          const auto& [r, g, b] = agent_colors[i];
+     for (size_t i = 0; i < agents.size(); ++i) {
+         const auto& agent = agents[i];
+         const auto& [r, g, b] = agent_colors[i];
      
-//          SDL_SetRenderDrawColor(renderer, r, g, b, 255);
-//          SDL_Rect rect;
-//          rect.x = agent.x_pos * CELL_WIDTH;
-//          rect.y = agent.y_pos * CELL_HEIGHT;
-//          rect.w = CELL_WIDTH;
-//          rect.h = CELL_HEIGHT;
-//          SDL_RenderFillRect(renderer, &rect);
-//      }
-//      SDL_RenderPresent(renderer);
-//  }
+         SDL_SetRenderDrawColor(renderer, r, g, b, 255);
+         SDL_Rect rect;
+         rect.x = agent.x_pos * CELL_WIDTH;
+         rect.y = agent.y_pos * CELL_HEIGHT;
+         rect.w = CELL_WIDTH;
+         rect.h = CELL_HEIGHT;
+         SDL_RenderFillRect(renderer, &rect);
+     }
+     SDL_RenderPresent(renderer);
+ }
  
- 
-//   void visualize_simulation(std::vector<Agent>& agents, int dim_x, int dim_y, int num_agents, int num_iterations, const std::vector<std::tuple<int, int, int>>& agent_colors, int num_threads) {
-//      SDL_Init(SDL_INIT_VIDEO);
-//      SDL_Window* window = SDL_CreateWindow("Crowd Simulation",
-//                                            SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-//                                            WINDOW_WIDTH, WINDOW_HEIGHT,
-//                                            SDL_WINDOW_SHOWN);
-//      SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
- 
-//      // CELL_WIDTH = std::max(1, WINDOW_WIDTH / dim_x);
-//      // CELL_HEIGHT = std::max(1, WINDOW_HEIGHT / dim_y);
-//      CELL_WIDTH = WINDOW_WIDTH / dim_x;
-//      CELL_HEIGHT = WINDOW_HEIGHT / dim_y;
- 
-//      bool quit = false;
-//      SDL_Event event;
- 
-//      int iteration_count = 0;
- 
-//      Quadtree qt(0, 0, dim_x-1, dim_y-1, 0);
- 
-//      while (!quit && iteration_count < num_iterations) {
-//          while (SDL_PollEvent(&event)) {
-//              if (event.type == SDL_QUIT)
-//                  quit = true;
-//          }
-//          // clear quadtree
-//          qt.reset();
- 
-//          #pragma omp parallel
-//          {
-//              std::mt19937 generator(std::random_device{}() + omp_get_thread_num());
-//              #pragma omp for schedule(dynamic, num_threads)
-//              for (int i = 0; i < num_agents; i++) {
-//                  move_agent(i, agents[i], dim_x, dim_y, generator);
-//              }
-//          }
- 
-//          #pragma omp parallel for schedule(dynamic)
-//          for (int i = 0; i < num_agents; i++) {
-//              qt.multiInsert(agents[i]); 
-//          }
- 
-//          std::vector<int> colliders(num_agents, -1);
-//          detect_collisions(colliders, agents, num_agents, &qt);
-//          resolve_collisions(colliders, agents, num_agents, dim_x, dim_y);
- 
-//          #pragma omp parallel for
-//          for(int i = 0; i < num_agents; i++) {
-//              agents[i].x_pos = agents[i].next_x;
-//              agents[i].y_pos = agents[i].next_y;
-//          }
-      
-//          render_agents(renderer, agents, dim_x, dim_y, agent_colors);
- 
-//          SDL_Delay(500);
-   
-//          if(!is_in_range(agents, num_agents, dim_x, dim_y)){
-//              printf("AGENT NOT IN RANGE\n");
-//          }
-//          iteration_count += 1;
-//      }
-//      SDL_DestroyRenderer(renderer);
-//      SDL_DestroyWindow(window);
-//      SDL_Quit();
-//  }
  
    
  int main(int argc, char *argv[]) {
@@ -399,60 +360,59 @@
      std::mt19937 gen(rd());
      std::uniform_int_distribution<> color_dist(0, 255);
  
-    //  for (int i = 0; i < num_agents; i++) {
-    //      agent_colors.push_back({
-    //          color_dist(gen), color_dist(gen), color_dist(gen)
-    //      });
-    //  }
+     for (int i = 0; i < num_agents; i++) {
+         agent_colors.push_back({
+             color_dist(gen), color_dist(gen), color_dist(gen)
+         });
+     }
     
-     std::vector<std::vector<int>> agent_quadrants(num_agents);
+     std::vector<std::vector<int>> agent_leaves(num_agents);
      Quadtree qt(0, 0, dim_x-1, dim_y-1, 0);
 
     const auto compute_start = std::chrono::steady_clock::now();
 
     for (int i = 0; i < num_agents; i++) {
-        agent_quadrants[i] = qt.getMultiQuadrant(agents[i]);
-        if (qt.children[0] == nullptr) {
-            qt.split();
-        }
+        std::cout << "Inserting agent id=" << agents[i].id << " at (" << agents[i].x_pos << "," << agents[i].y_pos << ")\n";
+        qt.multiInsert_2(agents[i], agent_leaves);
 
-        for (int quadrant : agent_quadrants[i]) {
-            if (qt.children[quadrant] == nullptr) {
-                qt.split();
-            }
-            if (qt.children[quadrant]) {
-                qt.children[quadrant]->multiInsert(agents[i]);
-            } else {
-                qt.multiInsert(agents[i]);
-            }
-        }
     }
 
      //visualize_simulation(agents, dim_x, dim_y, num_agents, num_iterations, agent_colors, num_threads);
 
-    //  SDL_Init(SDL_INIT_VIDEO);
-    //  SDL_Window* window = SDL_CreateWindow("Crowd Simulation",
-    //                                        SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-    //                                        WINDOW_WIDTH, WINDOW_HEIGHT,
-    //                                        SDL_WINDOW_SHOWN);
-    //  SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+        std::cerr << "SDL could not initialize! SDL_Error: " << SDL_GetError() << std::endl;
+        return 1;
+    }
+
+    // SDL_Init(SDL_INIT_VIDEO);
+     SDL_Window* window = SDL_CreateWindow("Crowd Simulation",
+                                           SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+                                           WINDOW_WIDTH, WINDOW_HEIGHT,
+                                           SDL_WINDOW_SHOWN);
+    if (!window) {
+        std::cerr << "Window could not be created! SDL_Error: " << SDL_GetError() << std::endl;
+        return 1;
+    }
+
+     SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
  
-     // CELL_WIDTH = std::max(1, WINDOW_WIDTH / dim_x);
-     // CELL_HEIGHT = std::max(1, WINDOW_HEIGHT / dim_y);
-    //  CELL_WIDTH = WINDOW_WIDTH / dim_x;
-    //  CELL_HEIGHT = WINDOW_HEIGHT / dim_y;
+     CELL_WIDTH = std::max(1, WINDOW_WIDTH / dim_x);
+     CELL_HEIGHT = std::max(1, WINDOW_HEIGHT / dim_y);
+     //CELL_WIDTH = WINDOW_WIDTH / dim_x;
+     //CELL_HEIGHT = WINDOW_HEIGHT / dim_y;
  
-    //  bool quit = false;
-    //  SDL_Event event;
+     bool quit = false;
+     SDL_Event event;
  
      int iteration_count = 0;
   
-     while (iteration_count < num_iterations) {
-        // while (SDL_PollEvent(&event)) {
-        //     if (event.type == SDL_QUIT)
-        //         quit = true;
-        // }
+     while (!quit && iteration_count < num_iterations) {
 
+        while (SDL_PollEvent(&event)) {
+            if (event.type == SDL_QUIT || event.type == SDLK_ESCAPE){
+                quit = true;
+            }
+        }
 
         // move agent
         #pragma omp parallel
@@ -464,50 +424,34 @@
              }
          }
 
-        #pragma omp parallel for schedule(dynamic)
-         for (int i = 0; i < num_agents; i++) {
-             std::vector<int> new_quads = qt.getMultiQuadrant(agents[i]);
-             // check whether quadrants have changed
-             if (new_quads != agent_quadrants[i]) {
-                 // Remove from old quadrants 
-                 for (int old_quad : agent_quadrants[i]) {
-                     if (qt.children[old_quad]) {
-                         qt.children[old_quad]->remove(agents[i]);
-                     }
-                 }
-                 // Insert into new quadrants
-                 for (int new_quad : new_quads) {
-                     if (qt.children[new_quad]) {
-                         qt.children[new_quad]->multiInsert(agents[i]);
-                     } else {
-                         qt.multiInsert(agents[i]); 
-                     }
-                 }
-                 agent_quadrants[i] = new_quads;
-             }
-         }
- 
- 
-         // const double time = std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::steady_clock::now() - quad_start).count();
-         // std::cout << "Quad time (sec): " << time << '\n';
- 
-         // const auto collision_start = std::chrono::steady_clock::now();
-
          std::vector<int> colliders(num_agents, -1);
          detect_collisions(colliders, agents, num_agents, &qt);
          resolve_collisions(colliders, agents, num_agents, dim_x, dim_y);
 
-         // const double c_time = std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::steady_clock::now() - collision_start).count();
-         // std::cout << "Collision time (sec): " << c_time << '\n';
-
-         #pragma omp parallel for
+         #pragma omp parallel for schedule(dynamic)
          for(int i = 0; i < num_agents; i++) {
+
              agents[i].x_pos = agents[i].next_x;
              agents[i].y_pos = agents[i].next_y;
+
+             std::vector<int> leaves;
+             qt.get_leaf_nodes(agents[i], leaves);
+
+             std::unordered_set<int> set_a(leaves.begin(), leaves.end());
+             std::unordered_set<int> set_b(agent_leaves[i].begin(), agent_leaves[i].end());
+         
+             if (set_a != set_b){
+                // Remove from old quadrants 
+                agent_leaves[i].clear();
+
+                qt.multiRemove(agents[i]);
+                qt.multiInsert_2(agents[i], agent_leaves);
+             }
          }
-         //render_agents(renderer, agents, dim_x, dim_y, agent_colors);
+
+         render_agents(renderer, agents, dim_x, dim_y, agent_colors);
  
-         //SDL_Delay(500);
+         SDL_Delay(500);
  
          iteration_count += 1;
    
@@ -515,12 +459,11 @@
              printf("AGENT NOT IN RANGE\n");
          }
      }
-    //  SDL_DestroyRenderer(renderer);
-    //  SDL_DestroyWindow(window);
-    //  SDL_Quit();
+     SDL_DestroyRenderer(renderer);
+     SDL_DestroyWindow(window);
+     SDL_Quit();
      
      const double compute_time = std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::steady_clock::now() - compute_start).count();
    
      std::cout << "Computation time (sec): " << compute_time << '\n';
    }
-    
