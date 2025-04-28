@@ -23,7 +23,8 @@
    
   #include <unistd.h>
   #include <omp.h>
-  // #include <SDL2/SDL.h>
+  /* Uncomment the following line to use the simulation
+  #include <SDL2/SDL.h> */
   
   const int WINDOW_WIDTH = 800;
   const int WINDOW_HEIGHT = 800;
@@ -233,7 +234,8 @@
       return;
   }
   
-  /*
+  /* Uncomment the following section to use the simulation 
+
   void render_agents(SDL_Renderer* renderer, const std::vector<Agent>& agents, int dim_x, int dim_y, const std::vector<std::tuple<int, int, int>>& agent_colors) {
       SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255); // white background
       SDL_RenderClear(renderer);
@@ -365,12 +367,14 @@
       std::random_device rd;
       std::mt19937 gen(rd());
       std::uniform_int_distribution<> color_dist(0, 255);
-  
+
+      /* Uncomment the following section to use the simulation
       for (int i = 0; i < num_agents; i++) {
           agent_colors.push_back({
               color_dist(gen), color_dist(gen), color_dist(gen)
           });
       }
+      */
 
       std::vector<omp_lock_t> agent_locks(num_agents);
 
@@ -385,8 +389,8 @@
   
       int iteration_count = 0;
   
-      // uncomment the following line to use the simulation
-      // visualize_simulation(agents, dim_x, dim_y, num_agents, num_iterations, agent_colors, agent_locks);
+      /* Uncomment the following line and comment the while loop to use the simulation 
+      visualize_simulation(agents, dim_x, dim_y, num_agents, num_iterations, agent_colors, agent_locks); */
   
       while (iteration_count < num_iterations) {
             #pragma omp parallel
