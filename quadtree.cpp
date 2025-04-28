@@ -27,9 +27,7 @@
  void Quadtree::split() {
      int midX = (min_x + max_x) / 2;
      int midY = (min_y + max_y) / 2;
- 
-     //std::cout << "Splitting node (" << min_x << "," << min_y << ") - (" << max_x << "," << max_y << ")\n";
- 
+  
      #pragma omp parallel sections 
      {
          #pragma omp section 
@@ -40,18 +38,18 @@
          #pragma omp section 
          {
              children[1] = std::make_unique<Quadtree>(midX, min_y, max_x, midY, depth + 1);
-         }
+        }
  
          #pragma omp section 
          {
              children[2] = std::make_unique<Quadtree>(min_x, midY, midX, max_y, depth + 1);
-         }
+        }
          
          #pragma omp section 
          {
              children[3] = std::make_unique<Quadtree>(midX, midY, max_x, max_y, depth + 1);
          }
-     }
+    }
      children[0]->id = Quadtree::next_id++;
      children[1]->id = Quadtree::next_id++;
      children[2]->id = Quadtree::next_id++;
@@ -108,104 +106,6 @@
      }
      return possible_quadrants;
  }
-
-// std::vector<int> Quadtree::getMultiQuadrant(const Agent& agent) {
-//     int midX = (min_x + max_x) / 2;
-//     int midY = (min_y + max_y) / 2;
-    
-//     std::vector<int> quadrants;
-
-//     if (agent.x_pos == midX) { // on vertical midline
-//         if (agent.y_pos < midY) {
-//             quadrants.push_back(0);
-//             quadrants.push_back(1);
-//         } else if (agent.y_pos > midY) {
-//             quadrants.push_back(2);
-//             quadrants.push_back(3);
-//         } else { // exact center
-//             quadrants.push_back(0);
-//             quadrants.push_back(1);
-//             quadrants.push_back(2);
-//             quadrants.push_back(3);
-//         }
-//     } else if (agent.y_pos == midY) { // on horizontal midline
-//         if (agent.x_pos < midX) {
-//             quadrants.push_back(0);
-//             quadrants.push_back(2);
-//         } else if (agent.x_pos > midX) {
-//             quadrants.push_back(1);
-//             quadrants.push_back(3);
-//         }
-//     } else { // normal non-boundary
-//         bool left = agent.x_pos < midX;
-//         bool right = agent.x_pos > midX;
-//         bool top = agent.y_pos < midY;
-//         bool bottom = agent.y_pos > midY;
-
-//         if (top && left) quadrants.push_back(0);
-//         if (top && right) quadrants.push_back(1);
-//         if (bottom && left) quadrants.push_back(2);
-//         if (bottom && right) quadrants.push_back(3);
-//     }
-
-//     return quadrants;
-// }
-
-
- 
- void Quadtree::multiInsert(Agent *agent) {
- 
-     omp_set_lock(&lock);
- 
-     if (children[0] != nullptr) { // has quadtree children/is not a leaf
-         std::vector<int> indices = getMultiQuadrant(*agent);
-         omp_unset_lock(&lock);
- 
-         if (!indices.empty()) {
-             for (auto index: indices) {
-                 // insert node
-                 children[index]->multiInsert(agent);
-             }
-         }
-         return;
-     }
-     // lock is still set
- 
-     // try to add to node itself (is leaf)
-     #pragma omp critical
-     agents.push_back(agent);
- 
-     if (agents.size() > max_agents && depth < max_depth){
-         if(children[0] == nullptr){
-             // splits into quadrants
-             split();
-         }
-         int i = 0;
- 
-         while (i < agents.size()){
-             std::vector<int> indices = getMultiQuadrant(*agents[i]);
- 
-             if (!indices.empty()) {
-                 Agent* moved = agents[i]; 
-                 // remove from parent
-     
-                 agents.erase(agents.begin() + i);
- 
-                 omp_unset_lock(&lock);
- 
-                 for (auto index:indices) {
-                     children[index]->multiInsert(moved);
-                 }
-                 omp_set_lock(&lock);
-             }
-             else {
-                 i+=1;
-             }
-         }
-     }
-     omp_unset_lock(&lock);
- }
- 
  
  void Quadtree::reset() {
      agents.clear();
@@ -236,31 +136,6 @@
      return collidable;
  }
  
-//  void Quadtree::remove(Agent &agent) {
-//      omp_set_lock(&lock);
- 
-//      if (children[0] != nullptr) {
-//          std::vector<int> indices = getMultiQuadrant(agent);
-//          omp_unset_lock(&lock);
- 
-//          for (int index : indices) {
-//              if (children[index]) {
-//                  children[index]->remove(agent);
-           
-//              }
-//          }
-//          return;
-//      }
-//      // erase the agent
-//      agents.erase(
-//          std::remove_if(agents.begin(), agents.end(), [&](const Agent& a) {
-//              return a.id == agent.id;
-//          }),
-//          agents.end()
-//      );
- 
-//      omp_unset_lock(&lock);
-//  }
  
  void Quadtree::multiRemove(Agent *agent) {
      omp_set_lock(&lock);
@@ -304,19 +179,20 @@
      }
  }
  
- void Quadtree::multiInsert_2(Agent *agent, std::vector<std::vector<int>>&  leaves) {
+ void Quadtree::multiInsert(Agent *agent, std::vector<std::vector<int>>&  leaves) {
  
      omp_set_lock(&lock);
  
      if (children[0] != nullptr) { // not a leaf
          std::vector<int> quadrants = getMultiQuadrant(*agent);
-         omp_unset_lock(&lock);
+        //  omp_unset_lock(&lock);
  
          if (!quadrants.empty()) {
              for (auto quad: quadrants) {
-                 children[quad]->multiInsert_2(agent, leaves);
+                 children[quad]->multiInsert(agent, leaves);
              }
          }
+         omp_unset_lock(&lock);
          return;
      }
      // lock is still set
@@ -336,14 +212,15 @@
              agent_leaf_ids.erase(std::remove(agent_leaf_ids.begin(), agent_leaf_ids.end(), this->id), agent_leaf_ids.end());
          }
  
-         omp_unset_lock(&lock); 
+        //  omp_unset_lock(&lock); 
  
          for (Agent* moved : agents_to_reinsert) {
              std::vector<int> quadrants = getMultiQuadrant(*moved);
              for (auto quad : quadrants) {
-                 children[quad]->multiInsert_2(moved, leaves);
+                 children[quad]->multiInsert(moved, leaves);
              }
          }
+         omp_unset_lock(&lock); 
  
          return;
  

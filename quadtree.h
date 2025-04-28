@@ -53,15 +53,12 @@
         void split();
         int getQuadrant(Agent &agent);
         std::vector<int> getMultiQuadrant(const Agent &agent);
-        void insert(Agent &agent);
-        void multiInsert(Agent *agent);
         void reset();
         Quadtree *get_leaf(Agent &agent);
         std::vector<Agent*> collidable_agents();
-        //void remove(Agent &agent);
         void multiRemove(Agent *agent);
+        void multiInsert(Agent *agent, std::vector<std::vector<int>>&  leaves);
         void get_leaf_nodes(Agent& agent, std::vector<int>& leaves);
-        void multiInsert_2(Agent *agent, std::vector<std::vector<int>>&  leaves);
  };
  
  #endif
