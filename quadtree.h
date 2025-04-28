@@ -30,7 +30,6 @@
          
          omp_lock_t lock;
  
-         //std::vector<Agent> agents;
          std::vector<Agent*> agents;
 
          std::array<std::unique_ptr<Quadtree>, 4> children;

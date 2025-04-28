@@ -252,24 +252,26 @@ void detect_collisions(std::vector<int>& colliders, std::vector<Agent>& agents, 
      }
  }
  
-//  void render_agents(SDL_Renderer* renderer, const std::vector<Agent>& agents, int dim_x, int dim_y, const std::vector<std::tuple<int, int, int>>& agent_colors) {
-//      SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255); // white background
-//      SDL_RenderClear(renderer);
+ /*
+ void render_agents(SDL_Renderer* renderer, const std::vector<Agent>& agents, int dim_x, int dim_y, const std::vector<std::tuple<int, int, int>>& agent_colors) {
+     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255); // white background
+     SDL_RenderClear(renderer);
  
-//      for (size_t i = 0; i < agents.size(); ++i) {
-//          const auto& agent = agents[i];
-//          const auto& [r, g, b] = agent_colors[i];
+     for (size_t i = 0; i < agents.size(); ++i) {
+         const auto& agent = agents[i];
+         const auto& [r, g, b] = agent_colors[i];
      
-//          SDL_SetRenderDrawColor(renderer, r, g, b, 255);
-//          SDL_Rect rect;
-//          rect.x = agent.x_pos * CELL_WIDTH;
-//          rect.y = agent.y_pos * CELL_HEIGHT;
-//          rect.w = CELL_WIDTH;
-//          rect.h = CELL_HEIGHT;
-//          SDL_RenderFillRect(renderer, &rect);
-//      }
-//      SDL_RenderPresent(renderer);
-//  }
+         SDL_SetRenderDrawColor(renderer, r, g, b, 255);
+         SDL_Rect rect;
+         rect.x = agent.x_pos * CELL_WIDTH;
+         rect.y = agent.y_pos * CELL_HEIGHT;
+         rect.w = CELL_WIDTH;
+         rect.h = CELL_HEIGHT;
+         SDL_RenderFillRect(renderer, &rect);
+     }
+     SDL_RenderPresent(renderer);
+ }
+ */
  
    
  int main(int argc, char *argv[]) {
@@ -335,12 +337,14 @@ void detect_collisions(std::vector<int>& colliders, std::vector<Agent>& agents, 
      std::random_device rd;
      std::mt19937 gen(rd());
      std::uniform_int_distribution<> color_dist(0, 255);
- 
-    //  for (int i = 0; i < num_agents; i++) {
-    //      agent_colors.push_back({
-    //          color_dist(gen), color_dist(gen), color_dist(gen)
-    //      });
-    //  }
+
+     /*
+     for (int i = 0; i < num_agents; i++) {
+         agent_colors.push_back({
+             color_dist(gen), color_dist(gen), color_dist(gen)
+         });
+     }
+    */
     
      std::vector<std::vector<int>> agent_leaves(num_agents);
      Quadtree *qt = new Quadtree(0, 0, dim_x-1, dim_y-1, 0);
@@ -351,43 +355,46 @@ void detect_collisions(std::vector<int>& colliders, std::vector<Agent>& agents, 
     const auto compute_start = std::chrono::steady_clock::now();
 
     for (int i = 0; i < num_agents; i++) {
-       // std::cout << "Inserting agent id=" << agents[i].id << " at (" << agents[i].x_pos << "," << agents[i].y_pos << ")\n";
         qt->multiInsert(&agents[i], agent_leaves);
 
     }
-     //visualize_simulation(agents, dim_x, dim_y, num_agents, num_iterations, agent_colors, num_threads);
 
-    // if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-    //     std::cerr << "SDL could not initialize! SDL_Error: " << SDL_GetError() << std::endl;
-    //     return 1;
-    // }
+    // visualize simulation
+    /*
+    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+        std::cerr << "SDL could not initialize! SDL_Error: " << SDL_GetError() << std::endl;
+        return 1;
+    }
 
-    // SDL_Window* window = SDL_CreateWindow("Crowd Simulation",
-    //                                        SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-    //                                        WINDOW_WIDTH, WINDOW_HEIGHT,
-    //                                        SDL_WINDOW_SHOWN);
-    // if (!window) {
-    //     std::cerr << "Window could not be created! SDL_Error: " << SDL_GetError() << std::endl;
-    //     return 1;
-    // }
+    SDL_Window* window = SDL_CreateWindow("Crowd Simulation",
+                                           SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+                                           WINDOW_WIDTH, WINDOW_HEIGHT,
+                                           SDL_WINDOW_SHOWN);
+    if (!window) {
+        std::cerr << "Window could not be created! SDL_Error: " << SDL_GetError() << std::endl;
+        return 1;
+    }
 
-    //  SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+     SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
  
-    //  CELL_WIDTH = std::max(1, WINDOW_WIDTH / dim_x);
-    //  CELL_HEIGHT = std::max(1, WINDOW_HEIGHT / dim_y);
+     CELL_WIDTH = std::max(1, WINDOW_WIDTH / dim_x);
+     CELL_HEIGHT = std::max(1, WINDOW_HEIGHT / dim_y);
  
-    //  bool quit = false;
-    //  SDL_Event event;
+     bool quit = false;
+     SDL_Event event;
+     */
  
      int iteration_count = 0;
   
      while (iteration_count < num_iterations) {
 
-        // while (SDL_PollEvent(&event)) {
-        //     if (event.type == SDL_QUIT || event.type == SDLK_ESCAPE){
-        //         quit = true;
-        //     }
-        // }
+        /*
+        while (SDL_PollEvent(&event)) {
+            if (event.type == SDL_QUIT || event.type == SDLK_ESCAPE){
+                quit = true;
+            }
+        }
+        */
 
         // move agent
         #pragma omp parallel
@@ -409,7 +416,7 @@ void detect_collisions(std::vector<int>& colliders, std::vector<Agent>& agents, 
              std::unordered_set<int> set_b(agent_leaves[i].begin(), agent_leaves[i].end());
          
              if (set_a != set_b){
-                // Remove from old quadrants 
+                // remove from old quadrants 
                 agent_leaves[i].clear();
 
                 qt->multiRemove(&agents[i]);
@@ -427,9 +434,10 @@ void detect_collisions(std::vector<int>& colliders, std::vector<Agent>& agents, 
              agents[i].y_pos = agents[i].next_y;
          }
 
-        //  render_agents(renderer, agents, dim_x, dim_y, agent_colors);
- 
-        //  SDL_Delay(500);
+        /*
+         render_agents(renderer, agents, dim_x, dim_y, agent_colors);
+         SDL_Delay(500);
+         */
  
          iteration_count += 1;
    
@@ -437,12 +445,13 @@ void detect_collisions(std::vector<int>& colliders, std::vector<Agent>& agents, 
              printf("AGENT NOT IN RANGE\n");
          }
      }
-    //  SDL_DestroyRenderer(renderer);
-    //  SDL_DestroyWindow(window);
-    //  SDL_Quit();
+     /*
+     SDL_DestroyRenderer(renderer);
+     SDL_DestroyWindow(window);
+     SDL_Quit();
+     */
      delete qt;
      
      const double compute_time = std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::steady_clock::now() - compute_start).count();
-   
      std::cout << "Computation time (sec): " << compute_time << '\n';
    }

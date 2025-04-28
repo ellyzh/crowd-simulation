@@ -2,7 +2,6 @@ CXX = g++
 
 CXXFLAGS_SERIAL = -Wall -std=c++17
 CXXFLAGS_PARALLEL = -Wall -std=c++17 -fopenmp
-#CXXFLAGS_PARALLEL = -Wall -std=c++17 
 
 
 TARGETS = serial parallel

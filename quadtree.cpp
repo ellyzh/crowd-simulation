@@ -185,7 +185,6 @@
  
      if (children[0] != nullptr) { // not a leaf
          std::vector<int> quadrants = getMultiQuadrant(*agent);
-        //  omp_unset_lock(&lock);
  
          if (!quadrants.empty()) {
              for (auto quad: quadrants) {
@@ -212,8 +211,6 @@
              agent_leaf_ids.erase(std::remove(agent_leaf_ids.begin(), agent_leaf_ids.end(), this->id), agent_leaf_ids.end());
          }
  
-        //  omp_unset_lock(&lock); 
- 
          for (Agent* moved : agents_to_reinsert) {
              std::vector<int> quadrants = getMultiQuadrant(*moved);
              for (auto quad : quadrants) {
@@ -223,7 +220,6 @@
          omp_unset_lock(&lock); 
  
          return;
- 
      }
      omp_unset_lock(&lock);
  }

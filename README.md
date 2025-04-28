@@ -14,17 +14,17 @@ Simulate collisions between agents in a large crowd using a quadtree in parallel
 1. Integrate quadtree-based spatial partitioning **(Rose)**
 2. Parallelize algorithm with OpenMP **(Elly)**
 3. Finish project milestone report **(Rose + Elly)**
-### April 16 - April 19
+### April 16 - April 19 [Completed]
 1. Add functions to verify that the code is working as expected **(Rose)**
 2. Analyse bottlenecks and explore optimization techniques **(Elly)**
     * Parallelize building of quadtree and collision check algorithm
-### April 20 - April 22
+### April 20 - April 22 [Completed]
 1. Analyse bottlenecks and explore optimization techniques **(Rose)**
     * Find ways to reduce the number of collision checks
-2. Test code with larger input files (ex. grid size of 4096x4096) **(Elly)**
-### April 23 - April 26
+2. Test code with larger input files (ex. grid size of 8192x8192) **(Elly)**
+### April 23 - April 26 [Completed]
 1. Experiment with PSC to test scalability **(Rose + Elly)**
 2. Gather results and examine key metrics **(Rose + Elly)**
-### April 27 - April 29
+### April 27 - April 29 [Completed]
 1. Finish our final report and prepare for presentation **(Rose + Elly)**
 2. Finalize Github repository code and documentation **(Rose + Elly)**
