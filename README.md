@@ -1,7 +1,11 @@
 # Large-scale Crowd Collision Simulations with Parallel Quadtree
 Rose Liu (roseliu), Elly Zheng (ellyz)
-## Summary
+
 Simulate collisions between agents in a large crowd using a quadtree in parallel.
+
+## Summary
+We implemented a crowd collision simulator with a parallel quadtree in OpenMP. The crowd collision simulator consists of a number of agents on a grid that are given a starting cardinal direction (north, east, south, or west), and each agent moves in their specified direction until a collision with either another agent or the grid edge. If two agents are predicted to move onto the same grid space, they bounce off each other and change directions instead of overlapping. We ran our algorithm on the GHC machines and the PSC machines to check scalability. Additionally, we also created a visualization tool with SDL to map out the agents as they move and interact with other agents on the grid to show how the crowd collision simulation works.
+
 
 ## Schedule
 ### April 2- April 9 [Completed]
